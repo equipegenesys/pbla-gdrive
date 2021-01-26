@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
 import pickle
 from googleapiclient.discovery import build
@@ -6,6 +6,10 @@ from google_auth_oauthlib.flow import Flow
 from google.auth.transport.requests import Request
 import google.oauth2.credentials, googleapiclient.discovery, os
 import json
+from dbcomp import crud, access
+from sqlalchemy.orm import Session
+
+# from access import SessionLocal
 
 CLIENT_SECRETS_FILE = '/app/driveapi/credentials.json'
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly', 'https://www.googleapis.com/auth/drive.activity.readonly']
@@ -17,17 +21,23 @@ router = APIRouter()
 @router.get('/api/integ/gdrive/status/user/{user_id}')
 def check_integ_status(user_id: int):
 	userTokenPath = '/app/driveapi/tokens/' + str(user_id)
-	if os.path.exists(userTokenPath+'/token.pickle'):
-		with open(userTokenPath+'/token.pickle', 'rb') as token:
-			creds = pickle.load(token)
-		service = build('drive', 'v3', credentials=creds)
-		results = service.about().get(fields="user(emailAddress)").execute()
-		mail = str(results.get('user').get('emailAddress'))
-		if results:
-			return f"O usuário com ID {user_id} está integrado à conta do Google Drive do usuário com e-mail {mail}."
-		else:
-			return f"O usuário com ID {user_id} não está integrado a nenhuma conta do Google Drive."
-	return f"O usuário com ID {user_id} não está integrado a nenhuma conta do Google Drive."
+
+	if crud.get_user(access.SessionLocal, user_id) != None:
+		return "Tem algo ai"
+	else:
+		return "Nao algo ai"
+
+	# if os.path.exists(userTokenPath+'/token.pickle'):
+	# 	with open(userTokenPath+'/token.pickle', 'rb') as token:
+	# 		creds = pickle.load(token)
+	# 	service = build('drive', 'v3', credentials=creds)
+	# 	results = service.about().get(fields="user(emailAddress)").execute()
+	# 	mail = str(results.get('user').get('emailAddress'))
+	# 	if results:
+	# 		return f"O usuário com ID {user_id} está integrado à conta do Google Drive do usuário com e-mail {mail}."
+	# 	else:
+	# 		return f"O usuário com ID {user_id} não está integrado a nenhuma conta do Google Drive."
+	# return f"O usuário com ID {user_id} não está integrado a nenhuma conta do Google Drive."
 
 @router.get('/api/integ/gdrive/new/user/{user_id}')
 def new_integ(user_id: int):

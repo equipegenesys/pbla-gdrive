@@ -3,10 +3,20 @@ from fastapi import FastAPI
 from fastapi import APIRouter
 # import os
 from driveapi import auth
+from driveapi import files
+from typing import List
+from sqlalchemy.orm import Session
+
+from dbcomp import crud, models, schemas, access
+# from .access import SessionLocal, engine
+
+access.Base.metadata.create_all(bind=access.engine)
 
 app = FastAPI(openapi_url="/api/integ/gdrive/openapi.json", docs_url="/api/integ/gdrive/docs", redoc_url=None)
 
 app.include_router(auth.router)
+
+app.include_router(files.router)
 
 # @app.get("/api/integ/gdrive")
 # def read_root():

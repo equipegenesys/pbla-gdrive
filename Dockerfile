@@ -8,4 +8,8 @@ RUN pip install --no-cache-dir --upgrade google-api-python-client google-auth-ht
 
 RUN pip install --upgrade requests
 
+RUN pip install SQLAlchemy
+
+RUN pip install psycopg2
+
 COPY ./app /app
