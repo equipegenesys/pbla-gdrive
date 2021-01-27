@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import List, Optional
 from pydantic import BaseModel
+
 # from .models import Tag, File, User
 
 class UserBase(BaseModel):
@@ -15,6 +16,7 @@ class User(UserBase):
     driveapi_account_id: str
     driveapi_name: str
     driveapi_email: str
+    driveapi_token: str
 
     is_active: bool
 

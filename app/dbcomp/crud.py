@@ -1,21 +1,25 @@
 from sqlalchemy.orm import Session
-from dbcomp import access
+from dbcomp import access, models
 
 from . import models, schemas
 
-#Dependency
-# def get_db():
-#     db = access.SessionLocal()
-#     try:
-#         yield db
-#     finally:
-#         db.close()
-
 def get_user(db: Session, user_id: int):
-    db = access.SessionLocal()
     return db.query(models.User).filter(models.User.pblacore_uid == user_id).first()
-    db.close()
+    # return db.query(*[c for c in models.User.__table__.c if c.name != 'driveapi_token']).filter(models.User.pblacore_uid == user_id).all()
 
+def create_user(db: Session, user_id: int, creds: str, name: str, mail: str):
+    db_user = models.User(pblacore_uid=user_id, driveapi_token=creds, driveapi_name=name, driveapi_email=mail)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+def update_user_status(db: Session, user_id: int, is_active: bool):
+    db_user = models.User(pblacore_uid=user_id, is_active=is_active)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)    
+    return db_user.is_active
 
 
 # def get_user_by_email(db: Session, email: str):
@@ -24,15 +28,6 @@ def get_user(db: Session, user_id: int):
 
 # def get_users(db: Session, skip: int = 0, limit: int = 100):
 #     return db.query(models.User).offset(skip).limit(limit).all()
-
-
-# def create_user(db: Session, user: schemas.UserCreate):
-#     fake_hashed_password = user.password + "notreallyhashed"
-#     db_user = models.User(email=user.email, hashed_password=fake_hashed_password)
-#     db.add(db_user)
-#     db.commit()
-#     db.refresh(db_user)
-#     return db_user
 
 # def get_items(db: Session, skip: int = 0, limit: int = 100):
 #     return db.query(models.Item).offset(skip).limit(limit).all()
