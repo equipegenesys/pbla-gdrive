@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
 import pickle
 from googleapiclient.discovery import build
@@ -8,11 +8,12 @@ import google.oauth2.credentials
 import googleapiclient.discovery
 import os
 import json
-from dbcomp import access
+from sqlalchemy.orm import Session
+from dbcomp import crud, access, schemas
 
 CLIENT_SECRETS_FILE = '/app/driveapi/credentials.json'
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
-          'https://www.googleapis.com/auth/drive.activity.readonly']
+		  'https://www.googleapis.com/auth/drive.activity.readonly']
 API_SERVICE_NAME = 'drive'
 API_VERSION = 'v3'
 
@@ -20,27 +21,22 @@ router = APIRouter()
 
 
 @router.get('/api/integ/gdrive/status/user/{user_id}/files/')
-def list_files(user_id: int, tag: str):
-    userTokenPath = '/app/driveapi/tokens/' + str(user_id)
-    searchQuery = f"fullText contains '{tag}' and mimeType != 'application/vnd.google-apps.folder'"
-
-    if os.path.exists(userTokenPath+'/token.pickle'):
-        with open(userTokenPath+'/token.pickle', 'rb') as token:
-            creds = pickle.load(token)
-        service = build('drive', 'v3', credentials=creds)
-        results = service.files().list(pageSize=100, q=searchQuery, fields="*").execute()
-        with open(userTokenPath+'/output', 'w') as output:
-            jsonObject = json.dumps(results, indent=4, ensure_ascii=False)
-            output.write(jsonObject)
-        items = results.get('files', [])
-        if not items:
-            return 'No files found.'
-        else:
-            fileList = []
-            for item in items:
-                fileList.append(
-                    {'name': item['name'], 'id': item['id'], 'mimeType': item['mimeType']})
-
-            # jsonObject = json.dumps(fileList, indent = 4, ensure_ascii=False)
-
-            return fileList
+def list_files(user_id: int, db: Session = Depends(access.get_db)):
+	user = schemas.UserBase
+	user.pblacore_uid = user_id
+	db_user = crud.get_user(db, user=user)
+	turmas = db_user.turmas
+	if db_user and db_user.driveapi_token:
+		creds = db_user.driveapi_token
+		service = build('drive', 'v3', credentials=creds)
+		if turmas:
+			result = {'fileList': []}
+			for turma in turmas:
+				print(type(turma))
+				sku_turma = turma.pblacore_sku_turma
+				searchQuery = f"fullText contains '{sku_turma}' and mimeType != 'application/vnd.google-apps.folder'"
+				file_list = service.files().list(pageSize=100, q=searchQuery, fields="*").execute()
+				result['fileList'].append(file_list) 
+			return result
+		return "O usuário não está em nenhuma turma"
+	return "O usuário não está integrado ao G Drive"
