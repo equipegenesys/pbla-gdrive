@@ -19,7 +19,6 @@ API_VERSION = 'v3'
 
 router = APIRouter()
 
-
 @router.get('/api/integ/gdrive/status/user/{user_id}/files/')
 def list_files(user_id: int, db: Session = Depends(access.get_db)):
 	user = schemas.UserBase
@@ -30,13 +29,44 @@ def list_files(user_id: int, db: Session = Depends(access.get_db)):
 		creds = db_user.driveapi_token
 		service = build('drive', 'v3', credentials=creds)
 		if turmas:
-			result = {'fileList': []}
+			result = {'userTurmaFiles': []}
 			for turma in turmas:
-				print(type(turma))
 				sku_turma = turma.pblacore_sku_turma
-				searchQuery = f"fullText contains '{sku_turma}' and mimeType != 'application/vnd.google-apps.folder'"
-				file_list = service.files().list(pageSize=100, q=searchQuery, fields="*").execute()
-				result['fileList'].append(file_list) 
+				searchQuery = f"fullText contains '{sku_turma}' and mimeType != 'application/vnd.google-apps.folder' and trashed != true"
+				file_list = service.files().list(pageSize=100, q=searchQuery, fields="nextPageToken, files(id, name, mimeType, description)").execute()
+				result['userTurmaFiles'].append({sku_turma: file_list})
 			return result
 		return "O usuário não está em nenhuma turma"
 	return "O usuário não está integrado ao G Drive"
+
+
+# @router.get('/api/integ/gdrive/status/user/{user_id}/files/')
+# def list_files(user_id: int, db: Session = Depends(access.get_db)):
+# 	user = schemas.UserBase
+# 	user.pblacore_uid = user_id
+# 	db_user = crud.get_user(db, user=user)
+# 	turmas = db_user.turmas
+# 	if db_user and db_user.driveapi_token:
+# 		creds = db_user.driveapi_token
+# 		service = build('drive', 'v3', credentials=creds)
+# 		if turmas:
+# 			result = {'userTurmaFiles': []}
+# 			full_list = []
+# 			for turma in turmas:
+# 				sku_turma = turma.pblacore_sku_turma
+# 				searchQuery = f"fullText contains '{sku_turma}' and mimeType != 'application/vnd.google-apps.folder'"
+# 				file_list = service.files().list(pageSize=1, q=searchQuery,
+# 												 fields="nextPageToken, files(id, name, mimeType, description)").execute()
+# 				if 'nextPageToken' in file_list:
+# 					nextPageToken = file_list['nextPageToken']
+# 					while 'nextPageToken' in file_list:
+# 						nextPageToken = file_list['nextPageToken']
+# 						full_list.append(file_list['files'])
+# 						file_list = service.files().list(pageToken=nextPageToken, pageSize=1, q=searchQuery,
+# 														 fields="nextPageToken, files(id, name, mimeType, description)").execute()
+# 						if 'nextPageToken' not in file_list:
+# 							full_list.append(file_list['files'])
+# 					result['userTurmaFiles'].append({sku_turma: full_list})
+# 			return result
+# 		return "O usuário não está em nenhuma turma"
+# 	return "O usuário não está integrado ao G Drive"

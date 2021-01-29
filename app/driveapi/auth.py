@@ -59,7 +59,7 @@ def new_integ(user_id: int, db: Session = Depends(access.get_db)):
 		return "Este usuário ja existe"
 
 
-@router.get('/api/integ/gdrive/add/user/oauthlisten/')
+@router.get('/api/integ/gdrive/add/user/oauthlisten/', include_in_schema=False)	
 def oauthlisten(state: str, code: str, scope: str, db: Session = Depends(access.get_db)):
 	flow = Flow.from_client_secrets_file(
 		CLIENT_SECRETS_FILE, scopes=SCOPES, state=state)
