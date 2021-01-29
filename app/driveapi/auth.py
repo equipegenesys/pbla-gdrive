@@ -51,7 +51,7 @@ def new_integ(user_id: int, db: Session = Depends(access.get_db)):
 	if db_user == None:
 		flow = Flow.from_client_secrets_file(
 			CLIENT_SECRETS_FILE, scopes=SCOPES)
-		flow.redirect_uri = 'https://analytics.pbl.tec.br/api/integ/gdrive/new/user/oauthlisten/'
+		flow.redirect_uri = 'https://analytics.pbl.tec.br/api/integ/gdrive/add/user/oauthlisten/'
 		authorization_url, state = flow.authorization_url(
 			prompt='consent', access_type='offline', include_granted_scopes='true', state=user_id)
 		return RedirectResponse(authorization_url)
@@ -63,7 +63,7 @@ def new_integ(user_id: int, db: Session = Depends(access.get_db)):
 def oauthlisten(state: str, code: str, scope: str, db: Session = Depends(access.get_db)):
 	flow = Flow.from_client_secrets_file(
 		CLIENT_SECRETS_FILE, scopes=SCOPES, state=state)
-	flow.redirect_uri = 'https://analytics.pbl.tec.br/api/integ/gdrive/new/user/oauthlisten/'
+	flow.redirect_uri = 'https://analytics.pbl.tec.br/api/integ/gdrive/add/user/oauthlisten/'
 	flow.fetch_token(code=code)
 	creds = flow.credentials
 

@@ -14,16 +14,21 @@ user_turma_table = Table('user_turma_association', Base.metadata,
 user_file_table = Table('user_file_association', Base.metadata,
                         Column('pblacore_uid', Integer,
                                ForeignKey('users.pblacore_uid')),
-                        Column('local_fileid', Integer,
-                               ForeignKey('files.local_fileid'))
+                        Column('driveapi_fileid', String,
+                               ForeignKey('files.driveapi_fileid'))
                         )
 
-
+file_turma_table = Table('file_turma_association', Base.metadata,
+                        Column('driveapi_fileid', String,
+                               ForeignKey('files.driveapi_fileid')),
+                        Column('pblacore_sku_turma', String,
+                               ForeignKey('turmas.pblacore_sku_turma'))
+                        )
+                        
 class User(Base):
     __tablename__ = "users"
 
     pblacore_uid = Column(Integer, primary_key=True, index=True)
-    # pblacore_name = Column(String, index=True)
 
     driveapi_account_id = Column(String, unique=True, index=True)
     driveapi_name = Column(String, index=True)
@@ -52,21 +57,24 @@ class Turma(Base):
 
     users = relationship("User", secondary=user_turma_table,
                          back_populates="turmas")
+    
+    files = relationship("File", secondary=file_turma_table,
+                         back_populates="turmas")
 
 
 class File(Base):
     __tablename__ = "files"
 
-    local_fileid = Column(Integer, primary_key=True, index=True)
+    driveapi_fileid = Column(String, primary_key=True, index=True)
 
-    # pblacore_tag = relationship("Tag", back_populates="pblacore_tag")
-    driveapi_file_id = Column(String, unique=True, index=True)
     driveapi_owner = Column(String, index=True)
     driveapi_lastmod = Column(String, index=True)
     driveapi_lastmod_user = Column(String, index=True)
+    
     is_active = Column(Boolean, default=True)
 
     users = relationship("User", secondary=user_file_table,
                          back_populates="files")
 
-# User.update_forward_refs()
+    turmas = relationship("Turma", secondary=file_turma_table,
+                         back_populates="files")

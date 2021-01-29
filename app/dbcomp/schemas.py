@@ -21,7 +21,6 @@ class User(UserBase):
     is_active: bool
 
     turmas: List[Turma] = []
-
     files: List[File] = []
 
     class Config:
@@ -29,8 +28,6 @@ class User(UserBase):
 
 class TurmaBase(BaseModel):
     pblacore_sku_turma: str
-    # title: Optional[str] = None
-    # description: Optional[str] = None
 
 class TurmaCreate(TurmaBase):
     pblacore_disci_turma: str
@@ -41,19 +38,15 @@ class TurmaCreate(TurmaBase):
 class TurmaAddUser(TurmaBase):
     users: Optional[List[int]] = None
 
-class Turma(TurmaBase):
-    pblacore_disci: str
-    pblacore_ano: int
-    pblacore_semestre: int
-    users: Optional[List[User]] = None
+class Turma(TurmaCreate):
+    files: Optional[List[File]] = None
 
     class Config:
         orm_mode = True
 
 
 class FileBase(BaseModel):
-    title: str
-    description: Optional[str] = None
+    driveapi_fileid: str
 
 
 class FileCreate(FileBase):
@@ -61,17 +54,14 @@ class FileCreate(FileBase):
 
 
 class File(FileBase):
-    local_fileid: str
-    pblacore_tag: str
-    driveapi_file_id: int
-    driveapi_owner: int
+    driveapi_owner: str
     driveapi_lastmod: str
     driveapi_lastmod_user: str
-    is_active: bool
-    title = 'File'
-    description = 'Este modelo representa os  arquivos no G Drive que serão monitorados'
 
-    users: List[User] = []
+    is_active: bool
+    
+    users: List[User] = None
+    turmas: List[Turma] = None
 
     class Config:
         orm_mode = True
