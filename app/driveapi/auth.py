@@ -9,7 +9,7 @@ import googleapiclient.discovery
 import os
 import json
 from sqlalchemy.orm import Session
-from dbcomp import crud, access
+from dbcomp import crud, access, schemas
 
 CLIENT_SECRETS_FILE = '/app/driveapi/credentials.json'
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
@@ -22,7 +22,9 @@ router = APIRouter()
 
 @router.get('/api/integ/gdrive/status/user/{user_id}')
 def check_integ_status(user_id: int, db: Session = Depends(access.get_db)):
-	db_user = crud.get_user(db, user_id=user_id)
+	user = schemas.UserBase
+	user.pblacore_uid = user_id
+	db_user = crud.get_user(db, user=user)
 
 	if db_user:
 		if db_user.driveapi_token != None:
@@ -40,9 +42,12 @@ def check_integ_status(user_id: int, db: Session = Depends(access.get_db)):
 	return {"msg": "Usuário ainda não cadatrado"}
 
 
-@router.get('/api/integ/gdrive/new/user/{user_id}')
+@router.get('/api/integ/gdrive/add/user/{user_id}')
 def new_integ(user_id: int, db: Session = Depends(access.get_db)):
-	db_user = crud.get_user(db, user_id=user_id)
+	user = schemas.UserBase
+	user.pblacore_uid = user_id
+	db_user = crud.get_user(db, user=user)
+
 	if db_user == None:
 		flow = Flow.from_client_secrets_file(
 			CLIENT_SECRETS_FILE, scopes=SCOPES)
@@ -54,7 +59,7 @@ def new_integ(user_id: int, db: Session = Depends(access.get_db)):
 		return "Este usuário ja existe"
 
 
-@router.get('/api/integ/gdrive/new/user/oauthlisten/')
+@router.get('/api/integ/gdrive/add/user/oauthlisten/')
 def oauthlisten(state: str, code: str, scope: str, db: Session = Depends(access.get_db)):
 	flow = Flow.from_client_secrets_file(
 		CLIENT_SECRETS_FILE, scopes=SCOPES, state=state)
@@ -67,6 +72,14 @@ def oauthlisten(state: str, code: str, scope: str, db: Session = Depends(access.
 	mail = str(results.get('user').get('emailAddress'))
 	name = str(results.get('user').get('displayName'))
 
-	crud.create_user(db=db, user_id=state, creds=creds, name=name, mail=mail)
+	user_to_create = schemas.UserCreate
+	
+	user_to_create.pblacore_uid = state
+	user_to_create.pblacore_token = creds
+	user_to_create.driveapi_name = name
+	user_to_create.driveapi_email = mail
 
-	return RedirectResponse('https://analytics.pbl.tec.br/api/integ/gdrive/status/user/'+state[0])
+	# return RedirectResponse('https://analytics.pbl.tec.br/api/integ/gdrive/status/user/'+state[0])
+
+	return crud.create_user(db=db, user_to_create=user_to_create)
+

@@ -4,11 +4,11 @@ from sqlalchemy.orm import relationship
 from .access import Base
 
 
-user_tag_table = Table('user_tag_association', Base.metadata,
+user_turma_table = Table('user_turma_association', Base.metadata,
                        Column('pblacore_uid', Integer,
                               ForeignKey('users.pblacore_uid')),
-                       Column('pblacore_tag', String,
-                              ForeignKey('tags.pblacore_tag'))
+                       Column('pblacore_sku_turma', String,
+                              ForeignKey('turmas.pblacore_sku_turma'))
                        )
 
 user_file_table = Table('user_file_association', Base.metadata,
@@ -32,7 +32,7 @@ class User(Base):
 
     is_active = Column(Boolean, default=True)
 
-    tags = relationship("Tag", secondary=user_tag_table,
+    turmas = relationship("Turma", secondary=user_turma_table,
                         back_populates="users")
 
     files = relationship("File", secondary=user_file_table,
@@ -42,16 +42,16 @@ class User(Base):
         return {'pblacore_uid': self.pblacore_uid, 'driveapi_name': self.driveapi_name,
             'driveapi_email': self.driveapi_email, 'is_active': self.is_active}
 
-class Tag(Base):
-    __tablename__ = "tags"
+class Turma(Base):
+    __tablename__ = "turmas"
 
-    pblacore_tag = Column(String, primary_key=True, index=True)
-    pblacore_disci = Column(String, index=True)
-    pblacore_ano = Column(Integer, index=True)
-    pblacore_semestre = Column(Integer, index=True)
+    pblacore_sku_turma = Column(String, primary_key=True, index=True)
+    pblacore_disci_turma = Column(String, index=True)
+    pblacore_ano_turma = Column(Integer, index=True)
+    pblacore_semestre_turma = Column(Integer, index=True)
 
-    users = relationship("User", secondary=user_tag_table,
-                         back_populates="tags")
+    users = relationship("User", secondary=user_turma_table,
+                         back_populates="turmas")
 
 
 class File(Base):

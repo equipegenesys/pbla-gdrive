@@ -5,41 +5,47 @@ from pydantic import BaseModel
 # from .models import Tag, File, User
 
 class UserBase(BaseModel):
-    driveapi_email: str
+    pblacore_uid: int
 
 class UserCreate(UserBase):
-    password: str
+    driveapi_email: str
+    driveapi_name: str
+    driveapi_token: str
 
 class User(UserBase):
-    pblacore_uid: int
-   
-    driveapi_account_id: str
-    driveapi_name: str
     driveapi_email: str
+    driveapi_name: str
     driveapi_token: str
+    driveapi_account_id: str
 
     is_active: bool
 
-    tags: List[Tag] = []
+    turmas: List[Turma] = []
 
     files: List[File] = []
 
     class Config:
         orm_mode = True
 
-class TagBase(BaseModel):
-    title: str
-    description: Optional[str] = None
+class TurmaBase(BaseModel):
+    pblacore_sku_turma: str
+    # title: Optional[str] = None
+    # description: Optional[str] = None
 
-class TagCreate(TagBase):
-    pass
+class TurmaCreate(TurmaBase):
+    pblacore_disci_turma: str
+    pblacore_ano_turma: int
+    pblacore_semestre_turma: int
+    users: Optional[List[int]] = None
 
-class Tag(TagBase):
-    pblacore_tag: str
+class TurmaAddUser(TurmaBase):
+    users: Optional[List[int]] = None
+
+class Turma(TurmaBase):
     pblacore_disci: str
     pblacore_ano: int
     pblacore_semestre: int
-    users: List[User] = []
+    users: Optional[List[User]] = None
 
     class Config:
         orm_mode = True
@@ -62,6 +68,8 @@ class File(FileBase):
     driveapi_lastmod: str
     driveapi_lastmod_user: str
     is_active: bool
+    title = 'File'
+    description = 'Este modelo representa os  arquivos no G Drive que serão monitorados'
 
     users: List[User] = []
 
