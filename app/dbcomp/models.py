@@ -14,13 +14,13 @@ user_turma_table = Table('user_turma_association', Base.metadata,
 user_file_table = Table('user_file_association', Base.metadata,
                         Column('pblacore_uid', Integer,
                                ForeignKey('users.pblacore_uid')),
-                        Column('driveapi_fileid', String,
-                               ForeignKey('files.driveapi_fileid'))
+                        Column('local_fileid', Integer,
+                               ForeignKey('files.local_fileid'))
                         )
 
 file_turma_table = Table('file_turma_association', Base.metadata,
-                        Column('driveapi_fileid', String,
-                               ForeignKey('files.driveapi_fileid')),
+                        Column('local_fileid', Integer,
+                               ForeignKey('files.local_fileid')),
                         Column('pblacore_sku_turma', String,
                                ForeignKey('turmas.pblacore_sku_turma'))
                         )
@@ -65,11 +65,13 @@ class Turma(Base):
 class File(Base):
     __tablename__ = "files"
 
-    driveapi_fileid = Column(String, primary_key=True, index=True)
+    local_fileid = Column(Integer, primary_key=True, index=True)
 
-    driveapi_owner = Column(String, index=True)
-    driveapi_lastmod = Column(String, index=True)
-    driveapi_lastmod_user = Column(String, index=True)
+    driveapi_fileid = Column(String, unique=True, index=True)
+
+#     driveapi_owner = Column(String, index=True)
+#     driveapi_lastmod = Column(String, index=True)
+#     driveapi_lastmod_user = Column(String, index=True)
     
     is_active = Column(Boolean, default=True)
 

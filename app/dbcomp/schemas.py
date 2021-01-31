@@ -46,17 +46,17 @@ class Turma(TurmaCreate):
 
 
 class FileBase(BaseModel):
+    local_fileid: int
     driveapi_fileid: str
-
 
 class FileCreate(FileBase):
     pass
 
 
 class File(FileBase):
-    driveapi_owner: str
-    driveapi_lastmod: str
-    driveapi_lastmod_user: str
+    # driveapi_owner: str
+    # driveapi_lastmod: str
+    # driveapi_lastmod_user: str
 
     is_active: bool
     

@@ -17,8 +17,8 @@ def create_user(db: Session, user_to_create: schemas.UserCreate):
 		db.add(db_user)
 		db.commit()
 		db.refresh(db_user)
-		return f"A conta do Google Drive de {db_user.driveapi_email} foi integrada ao usuário do PBL Analytics com ID {db_user.pblacore_uid}."
-	return "Já existe um usuário cadastrado com esse e-mail"
+		return {"msg":f"A conta do Google Drive de {db_user.driveapi_email} foi integrada ao usuário do PBL Analytics com ID {db_user.pblacore_uid}."}
+	return {"msg": "Já existe um usuário cadastrado com esse e-mail"}
 
 
 def get_turma(db: Session, turma: schemas.TurmaBase):
@@ -61,7 +61,25 @@ def add_user_turma(db: Session, turma: schemas.TurmaAddUser):
 			userDict = user.basicData()
 			estudantes['estudantes'].append(userDict)
 		return {'turma': estudantes}
-	return "Não a há usuários no corpo do HTTP POST"
+	return {"msg": "Não a há usuários no corpo do HTTP POST"}
+
+
+def get_files(db: Session, file: schemas.FileBase):
+	return db.query(models.File).filter(models.File.driveapi_fileid == file.driveapi_fileid).first()
+	
+	
+def create_file(db: Session, file: schemas.TurmaAddUser, user: schemas.UserBase, turma: schemas.TurmaBase):
+	db_file = models.File(driveapi_fileid=file.driveapi_fileid,
+								is_active=file.is_active)
+	db_file.users.append(user)
+	db_file.turmas.append(turma)
+
+	db.add(db_file)
+	db.commit()
+
+
+
+
 
 # def create_user_item(db: Session, turma: schemas.TurmaAddUser, user_id: int):
 # 	db_item = models.Item(**item.dict(), owner_id=user_id)
