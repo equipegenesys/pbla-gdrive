@@ -23,13 +23,13 @@ router = APIRouter()
 
 
 @router.post('/api/integ/gdrive/add/turma/')
-def new_turma(turma: schemas.TurmaCreate, db: Session = Depends(access.get_db)):
+def new_turma(turma: schemas.TurmaCreate, db: Session = Depends(access.get_app_db)):
 	if crud.get_turma(db, turma=turma.pblacore_sku_turma) != None:
 		return "Essa turma já existe"
 	return crud.create_turma(db=db, turma_to_create=turma)
 
 @router.post('/api/integ/gdrive/add/user/turma')
-def add_user_turma(turma: schemas.TurmaAddUser, db: Session = Depends(access.get_db)):
+def add_user_turma(turma: schemas.TurmaAddUser, db: Session = Depends(access.get_app_db)):
 	if turma.users != None:
 		if crud.get_turma(db, turma=turma.pblacore_sku_turma) != None:
 			return crud.add_user_turma(db, turma=turma)

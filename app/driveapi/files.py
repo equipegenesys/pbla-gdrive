@@ -9,7 +9,11 @@ import googleapiclient.discovery
 import os
 import json
 from sqlalchemy.orm import Session
-from dbcomp import crud, access, schemas
+from dbcomp import crud, access, schemas, models
+from google.auth.exceptions import RefreshError
+from . import auth
+
+# from access import BaseB
 
 CLIENT_SECRETS_FILE = '/app/driveapi/credentials.json'
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
@@ -23,7 +27,7 @@ router = APIRouter()
 
 
 @router.get('/api/integ/gdrive/status/user/{user_id}/files/')
-def list_files(user_id: int, db: Session = Depends(access.get_db)):
+def list_files(user_id: int, db: Session = Depends(access.get_app_db)):
 	user = schemas.UserBase
 	user.pblacore_uid = user_id
 	db_user = crud.get_user(db, user=user)
@@ -75,6 +79,25 @@ def list_files(user_id: int, db: Session = Depends(access.get_db)):
 				loop_index = 1
 
 				result['userTurmaFiles'].append({sku_turma: full_list})
-			return msg
+			return result
 		return {"msg": "O usuário não está em nenhuma turma"}
 	return {"msg": "O usuário não está integrado ao G Drive"}
+
+
+@router.post('/api/integ/gdrive/notify')
+def record_change(user_id: int, resource_id: str, db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
+	user = schemas.UserBase
+	user.pblacore_uid = user_id
+	db_user = crud.get_user(db_app, user=user)
+	models.tableCreator(tablename=resource_id)
+
+	if db_user.driveapi_token != None:
+		creds = db_user.driveapi_token
+		service = build('drive', 'v3', credentials=creds)
+		try: 
+			response = service.files().get(fileId=resource_id, fields='*').execute()
+			return response
+		except RefreshError as re:
+			return auth.renew_token(user_id = user_id)
+	else:
+		return {"msg": "O usuário não está integrado ao G Drive"}

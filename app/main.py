@@ -11,7 +11,7 @@ from dbcomp import crud, models, schemas, access
 
 # from .access import SessionLocal, engine
 
-access.Base.metadata.create_all(bind=access.engine)
+# access.BaseA.metadata.create_all(bind=access.engine)
 
 app = FastAPI(openapi_url="/api/integ/gdrive/openapi.json",
               docs_url="/api/integ/gdrive/docs", redoc_url=None,

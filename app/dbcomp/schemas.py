@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Json
 
 # from .models import Tag, File, User
 
@@ -65,5 +65,17 @@ class File(FileBase):
 
     class Config:
         orm_mode = True
+
+class FileRecords(FileBase):
+    pblacore_uid: int
+    is_active: bool
+    file_fields: Json
+    activity_fields: Json
+    file_revision: bytes
+    is_active: bool
+
+    class Config:
+        orm_mode = True
+
 
 User.update_forward_refs()

@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from dbcomp import access, models
-from . import models, schemas
+from . import models, schemas, access
 
 
 def get_user(db: Session, user: schemas.UserBase):
@@ -19,6 +19,16 @@ def create_user(db: Session, user_to_create: schemas.UserCreate):
 		db.refresh(db_user)
 		return {"msg":f"A conta do Google Drive de {db_user.driveapi_email} foi integrada ao usuário do PBL Analytics com ID {db_user.pblacore_uid}."}
 	return {"msg": "Já existe um usuário cadastrado com esse e-mail"}
+
+
+def update_token(db: Session, user_to_update: schemas.UserCreate):
+	if db.query(models.User).filter(models.User.driveapi_email == user_to_update.driveapi_email).first():
+		db_user = db.query(models.User).filter(models.User.pblacore_uid == user_to_update.pblacore_uid).first()
+		db_user.driveapi_token=user_to_update.pblacore_token
+		db.commit()
+		db.refresh(db_user)
+		return {"msg":f"A conta do Google Drive de {db_user.driveapi_email} teve seu token atualizado no PBL Analytics com ID {db_user.pblacore_uid}."}
+	return {"msg": "Não existe um usuário cadastrado com esse e-mail"}
 
 
 def get_turma(db: Session, turma: schemas.TurmaBase):
@@ -78,7 +88,13 @@ def create_file(db: Session, file: schemas.TurmaAddUser, user: schemas.UserBase,
 	db.commit()
 
 
+def create_file_record(db: Session, file_record: schemas.FileRecords):
+	db_file_record = models.FileRecords(name=file_record)
+	db.add(db_file_record)
+	db.commit()
 
+def get_file_record(db: Session, file_record: str):
+	return db.query(models.FileRecords).filter(models.FileRecords.__tablename__ == file_record).first()
 
 
 # def create_user_item(db: Session, turma: schemas.TurmaAddUser, user_id: int):
