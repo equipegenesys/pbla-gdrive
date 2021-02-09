@@ -1,10 +1,17 @@
 from sqlalchemy.orm import Session
 from dbcomp import access, models
 from . import models, schemas, access
-
+import pickle
 
 def get_user(db: Session, user: schemas.UserBase):
-	return db.query(models.User).filter(models.User.pblacore_uid == user.pblacore_uid).first()
+	error = {}
+	try:
+		db_user = db.query(models.User).filter(
+			models.User.pblacore_uid == user.pblacore_uid).first()
+		return db_user
+	except pickle.UnpicklingError as e:
+		error = {"user_id": user.pblacore_uid, "cadastrado": True, "integrado": False, "info¨": "Token corrompido"}
+		return error
 
 
 def create_user(db: Session, user_to_create: schemas.UserCreate):
@@ -17,17 +24,21 @@ def create_user(db: Session, user_to_create: schemas.UserCreate):
 		db.add(db_user)
 		db.commit()
 		db.refresh(db_user)
-		return {"msg":f"A conta do Google Drive de {db_user.driveapi_email} foi integrada ao usuário do PBL Analytics com ID {db_user.pblacore_uid}."}
+		return {"msg": f"A conta do Google Drive de {db_user.driveapi_email} foi integrada ao usuário do PBL Analytics com ID {db_user.pblacore_uid}."}
 	return {"msg": "Já existe um usuário cadastrado com esse e-mail"}
 
 
 def update_token(db: Session, user_to_update: schemas.UserCreate):
+	db_connection = access.engine_app_db.connect()
+	db_connection.execute(f'UPDATE users SET driveapi_token = NULL WHERE pblacore_uid = {user_to_update.pblacore_uid};')
+	db_connection.close()
 	if db.query(models.User).filter(models.User.driveapi_email == user_to_update.driveapi_email).first():
-		db_user = db.query(models.User).filter(models.User.pblacore_uid == user_to_update.pblacore_uid).first()
-		db_user.driveapi_token=user_to_update.pblacore_token
+		db_user = db.query(models.User).filter(
+			models.User.pblacore_uid == user_to_update.pblacore_uid).first()
+		db_user.driveapi_token = user_to_update.pblacore_token
 		db.commit()
 		db.refresh(db_user)
-		return {"msg":f"A conta do Google Drive de {db_user.driveapi_email} teve seu token atualizado no PBL Analytics com ID {db_user.pblacore_uid}."}
+		return {"msg": f"A conta do Google Drive de {db_user.driveapi_email} teve seu token atualizado no PBL Analytics com ID {db_user.pblacore_uid}."}
 	return {"msg": "Não existe um usuário cadastrado com esse e-mail"}
 
 
@@ -66,7 +77,7 @@ def add_user_turma(db: Session, turma: schemas.TurmaAddUser):
 			if db_user is not None:
 				selected_turma.users.append(db_user)
 				db.commit()
-		estudantes = {'estudantes': []}	
+		estudantes = {'estudantes': []}
 		for user in selected_turma.users:
 			userDict = user.basicData()
 			estudantes['estudantes'].append(userDict)
@@ -76,8 +87,8 @@ def add_user_turma(db: Session, turma: schemas.TurmaAddUser):
 
 def get_files(db: Session, file: schemas.FileBase):
 	return db.query(models.File).filter(models.File.driveapi_fileid == file.driveapi_fileid).first()
-	
-	
+
+
 def create_file(db: Session, file: schemas.TurmaAddUser, user: schemas.UserBase, turma: schemas.TurmaBase):
 	db_file = models.File(driveapi_fileid=file.driveapi_fileid,
 								is_active=file.is_active)
@@ -86,6 +97,8 @@ def create_file(db: Session, file: schemas.TurmaAddUser, user: schemas.UserBase,
 
 	db.add(db_file)
 	db.commit()
+	created_db_file =  get_files(db=db, file=db_file)
+	models.tableCreator(tablename=created_db_file.local_fileid)
 
 
 def create_file_record(db: Session, file_record: schemas.FileRecords):

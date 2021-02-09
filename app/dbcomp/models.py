@@ -1,7 +1,9 @@
 from __future__ import annotations
-from sqlalchemy import Table, Boolean, Column, ForeignKey, Integer, String, LargeBinary, PickleType, JSON
+from sqlalchemy import Table, Boolean, Column, ForeignKey, Integer, String, PickleType
+from sqlalchemy import LargeBinary, JSON
 from sqlalchemy.orm import relationship
 from .access import BaseA, BaseB, engine_data_db
+import sqlalchemy.types as types
 
 
 user_turma_table = Table('user_turma_association', BaseA.metadata,
@@ -79,15 +81,16 @@ class File(BaseA):
 						  back_populates="files")
 
 def tableCreator(tablename):
-	if not engine_data_db.dialect.has_table(engine_data_db, tablename):  
+	if not engine_data_db.dialect.has_table(engine_data_db, tablename):
 		class FileRecords(BaseB):
 			__tablename__ = tablename
-			local_fileid = Column(Integer, primary_key=True)
-			pblacore_uid = Column(Integer)
-			file_fields = Column(JSON),
-			activity_fields = Column(JSON),
+			# local_fileid = Column(Integer, primary_key=True)
+			# pblacore_uid = Column(Integer)
+			sequencial = Column(Integer, primary_key=True, index=True)
+			file_fields = Column(types.JSON),
+			activity_fields = Column(types.JSON),
 			file_revision = (LargeBinary),
-			is_active = Column(Boolean, default=True)
+			# is_active = Column(Boolean, default=True)
 			# access.BaseB.metadata.name=file_record,
 		BaseB.metadata.create_all(bind=engine_data_db)
 		return {"msg": "Tabela do arquivo foi criada no banco de dados"}
