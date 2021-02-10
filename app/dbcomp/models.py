@@ -84,14 +84,12 @@ def tableCreator(tablename):
 	if not engine_data_db.dialect.has_table(engine_data_db, tablename):
 		class FileRecords(BaseB):
 			__tablename__ = tablename
-			# local_fileid = Column(Integer, primary_key=True)
-			# pblacore_uid = Column(Integer)
 			sequencial = Column(Integer, primary_key=True, index=True)
-			file_fields = Column(types.JSON),
-			activity_fields = Column(types.JSON),
-			file_revision = (LargeBinary),
-			# is_active = Column(Boolean, default=True)
-			# access.BaseB.metadata.name=file_record,
+			source_uid = Column(Integer)
+			record_date = Column(String)
+			file_fields = Column(JSON)
+			activity_fields = Column(JSON)
+			file_revision = Column(LargeBinary)
 		BaseB.metadata.create_all(bind=engine_data_db)
 		return {"msg": "Tabela do arquivo foi criada no banco de dados"}
 	return {"msg": "Tabela do arquivo já existe no banco de dados"}
