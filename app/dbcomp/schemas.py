@@ -5,77 +5,83 @@ from pydantic import BaseModel, Json
 # from .models import Tag, File, User
 
 class UserBase(BaseModel):
-    pblacore_uid: int
+	pblacore_uid: int
+	pblacore_email: str
+	pblacore_nome: str
 
 class UserCreate(UserBase):
-    driveapi_email: str
-    driveapi_name: str
-    driveapi_token: str
+	driveapi_email: str
+	driveapi_name: str
+	driveapi_token: str
 
 class User(UserBase):
-    driveapi_email: str
-    driveapi_name: str
-    driveapi_token: str
-    driveapi_account_id: str
+	driveapi_email: str
+	driveapi_name: str
+	driveapi_token: str
+	driveapi_account_id: str
 
-    is_active: bool
+	is_active: bool
 
-    turmas: List[Turma] = []
-    files: List[File] = []
+	turmas: List[Turma] = []
+	files: List[File] = []
 
-    class Config:
-        orm_mode = True
+	class Config:
+		orm_mode = True
 
 class TurmaBase(BaseModel):
-    pblacore_sku_turma: str
+	pblacore_sku_turma: str
+	pblacore_disci_turma: str
+	pblacore_ano_turma: int
+	pblacore_semestre_turma: int
 
 class TurmaCreate(TurmaBase):
-    pblacore_disci_turma: str
-    pblacore_ano_turma: int
-    pblacore_semestre_turma: int
-    users: Optional[List[int]] = None
+	users: Optional[List[int]] = None
 
 class TurmaAddUser(TurmaBase):
-    users: Optional[List[int]] = None
+	users: Optional[List[int]] = None
 
 class Turma(TurmaCreate):
-    files: Optional[List[File]] = None
+	files: Optional[List[File]] = None
 
-    class Config:
-        orm_mode = True
+	class Config:
+		orm_mode = True
 
+class TurmaAdd(TurmaBase):
+	users: List[UserBase]
+
+	class Config:
+		orm_mode = True
 
 class FileBase(BaseModel):
-    local_fileid: int
-    driveapi_fileid: str
+	local_fileid: int
+	driveapi_fileid: str
 
 class FileCreate(FileBase):
-    pass
+	pass
 
 
 class File(FileBase):
-    # driveapi_owner: str
-    # driveapi_lastmod: str
-    # driveapi_lastmod_user: str
+	# driveapi_owner: str
+	# driveapi_lastmod: str
+	# driveapi_lastmod_user: str
 
-    is_active: bool
-    
-    users: List[User] = None
-    turmas: List[Turma] = None
+	is_active: bool
+	
+	users: List[User] = None
+	turmas: List[Turma] = None
 
-    class Config:
-        orm_mode = True
+	class Config:
+		orm_mode = True
 
-class FileRecords(FileBase):
-    pblacore_uid: int
-    is_active: bool
-    file_fields: Json
-    activity_fields: Json
-    file_revision: bytes
-    is_active: bool
+class FileRecords(BaseModel):
+	source_uid: int
+	record_date: str
+	file_fields: Json
+	activity_fields: Json
+	file_revision: bytes
 
-    class Config:
-        orm_mode = True
+	class Config:
+		orm_mode = True
 
 
 User.update_forward_refs()

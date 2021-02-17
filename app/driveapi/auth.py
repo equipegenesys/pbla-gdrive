@@ -1,16 +1,20 @@
-from fastapi import APIRouter, Depends
-from fastapi.responses import RedirectResponse
 import pickle
+import os
+import json
+
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import Flow
 from google.auth.transport.requests import Request
+from google.auth.exceptions import RefreshError
 import google.oauth2.credentials
 import googleapiclient.discovery
-import os
-import json
+
+from fastapi import APIRouter, Depends
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
+
 from dbcomp import crud, access, schemas
-from google.auth.exceptions import RefreshError
+from driveapi import files, auth
 
 CLIENT_SECRETS_FILE = '/app/driveapi/credentials.json'
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
@@ -25,7 +29,7 @@ router = APIRouter()
 def check_integ_status(user_id: int, db: Session = Depends(access.get_app_db)):
 	user = schemas.UserBase
 	user.pblacore_uid = user_id
-	db_user = crud.get_user(db, user=user)
+	db_user = crud.get_user(db=db, user=user)
 
 	if db_user:
 		if type(db_user) == dict:
@@ -54,17 +58,16 @@ def check_integ_status(user_id: int, db: Session = Depends(access.get_app_db)):
 
 @router.get('/api/integ/gdrive/new/user/{user_id}')
 def new_integ(user_id: int, db: Session = Depends(access.get_app_db)):
-	user = schemas.UserBase
-	user.pblacore_uid = user_id
-	db_user = crud.get_user(db, user=user)
-
-	if db_user == None:
+	integ_status = check_integ_status(db=db, user_id=user_id)
+	if integ_status['integrado'] == False:
 		flow = Flow.from_client_secrets_file(
 			CLIENT_SECRETS_FILE, scopes=SCOPES)
 		flow.redirect_uri = 'https://analytics.pbl.tec.br/api/integ/gdrive/oauthlisten/'
 		authorization_url, state = flow.authorization_url(
 			prompt='consent', access_type='offline', include_granted_scopes='true', state=user_id)
-		return RedirectResponse(authorization_url)
+		print(authorization_url)
+		# return RedirectResponse(authorization_url)
+		return authorization_url
 	else:
 		return "Este usuário ja existe"
 
@@ -109,6 +112,15 @@ def oauthlisten(state: str, code: str, scope: str, db: Session = Depends(access.
 		# statement = text("""UPDATE users SET driveapi_token = '0' VALUES(:id, :title, :primary_author)""")
 		# print(user.pblacore_token)
 		crud.update_token(db=db, user_to_update=user)
-		return check_integ_status(db=db, user_id=user.pblacore_uid)
+		integ_status = auth.check_integ_status(db=db, user_id=user.pblacore_uid)
+		if integ_status['integrado'] == True:
+			# listar arquivos (o que já atualiza a tabela de arquivos e cria tabelas individuais para cada um)
+			files.list_files(db=db, user_id=user.pblacore_uid)
+		return integ_status
 	else:
-		return crud.create_user(db=db, user_to_create=user)
+		crud.create_user_fromgdrive(db=db, user_to_create=user)
+		integ_status = auth.check_integ_status(db=db, user_id=user.pblacore_uid)
+		if integ_status['integrado'] == True:
+			# listar arquivos (o que já atualiza a tabela de arquivos e cria tabelas individuais para cada um)
+			files.list_files(db=db, user_id=user.pblacore_uid)
+		return integ_status

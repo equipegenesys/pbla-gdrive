@@ -32,6 +32,8 @@ class User(BaseA):
 	__tablename__ = "users"
 
 	pblacore_uid = Column(Integer, primary_key=True, index=True)
+	pblacore_email = Column(String)
+	pblacore_nome = Column(String)
 
 	driveapi_account_id = Column(String, unique=True, index=True)
 	driveapi_name = Column(String, index=True)

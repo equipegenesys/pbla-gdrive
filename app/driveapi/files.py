@@ -22,7 +22,8 @@ SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
 API_SERVICE_NAME = 'drive'
 API_VERSION = 'v3'
 
-FILE_FIELDS = 'nextPageToken, files(id, name, starred, description, mimeType, properties, appProperties, version, thumbnailLink, viewedByMe, viewedByMeTime, createdTime, modifiedTime, modifiedByMeTime, sharedWithMeTime, sharingUser, owners, lastModifyingUser, lastModifyingUser, ownedByMe, fileExtension, size, md5Checksum, contentHints)'
+# FILE_FIELDS = 'nextPageToken, files(id, name, starred, description, mimeType, properties, appProperties, version, thumbnailLink, viewedByMe, viewedByMeTime, createdTime, modifiedTime, modifiedByMeTime, sharedWithMeTime, sharingUser, owners, lastModifyingUser, lastModifyingUser, ownedByMe, fileExtension, size, md5Checksum, contentHints)'
+FILE_FIELDS = 'nextPageToken, files(id, name, mimeType, fileExtension)'
 
 router = APIRouter()
 
@@ -31,7 +32,7 @@ router = APIRouter()
 def list_files(user_id: int, db: Session = Depends(access.get_app_db)):
 	user = schemas.UserBase
 	user.pblacore_uid = user_id
-	db_user = crud.get_user(db, user=user)
+	db_user = crud.get_user(db=db, user=user)
 	if type(db_user) == dict:
 		return db_user
 	else:
@@ -61,8 +62,10 @@ def list_files(user_id: int, db: Session = Depends(access.get_app_db)):
 
 								file_schema.driveapi_fileid = file['id']
 								file_schema.is_active = True
-								if crud.get_files(db, file=file_schema) == None:
+								if crud.get_files(db=db, file=file_schema) == None:
 									crud.create_file(db, file_schema, db_user, turma)
+								else:
+									crud.update_file(db=db, file_to_update=file['id'], user=user_id, turma=turma.pblacore_sku_turma)
 								msg.append({"msg":f"Arquivo "+"'"+file['name']+"'"+" já existe na base de dados"})
 								
 							else:
@@ -72,8 +75,10 @@ def list_files(user_id: int, db: Session = Depends(access.get_app_db)):
 
 									file_schema.driveapi_fileid = file['id']
 									file_schema.is_active = True
-									if crud.get_files(db, file=file_schema) == None:
+									if crud.get_files(db=db, file=file_schema) == None:
 										crud.create_file(db, file_schema, db_user, turma)
+									else:
+										crud.update_file(db=db, file_to_update=file['id'], user=user_id, turma=turma.pblacore_sku_turma)
 									msg.append({"msg":f"Arquivo "+"'"+file['name']+"'"+" já existe na base de dados"})
 
 							loop_index = loop_index + 1
@@ -88,7 +93,7 @@ def list_files(user_id: int, db: Session = Depends(access.get_app_db)):
 		return {"msg": "O usuário não está integrado ao G Drive"}
 
 
-@router.post('/api/integ/gdrive/metadata')
+@router.get('/api/integ/gdrive/file/metadata')
 def record_change(user_id: int, resource_id: str, db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
 	user_status = auth.check_integ_status(user_id=user_id, db=db_app)
 	if user_status['integrado'] == True:
@@ -99,6 +104,7 @@ def record_change(user_id: int, resource_id: str, db_app: Session = Depends(acce
 		service = build('drive', 'v3', credentials=creds)
 		try: 
 			response = service.files().get(fileId=resource_id, fields='*').execute()
+
 			return response
 		except HttpError as err:
 			if err.resp.status in [404]:
