@@ -1,0 +1,4 @@
+dbconfig.py
+
+# Except this file
+!.gitignore
