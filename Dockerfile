@@ -12,4 +12,4 @@ RUN pip install SQLAlchemy
 
 RUN pip install psycopg2
 
-# COPY ./app /app
+COPY ./app /app
