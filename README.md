@@ -4,4 +4,4 @@ Microsserviço baseado no [FastAPI](https://fastapi.tiangolo.com/) que integra A
 
 Para rodar esta aplicação, clone o repositório e gere o container a partir do Dockerfile. A documentação poderá então ser acessada em localhost/api/integ/gdrive/docs.
 
-*Desenvolvimento como parte do Mestrado de Engenharia de Software da CESAR School.*
+*Em desenvolvimento como parte do Mestrado de Engenharia de Software da CESAR School.*
