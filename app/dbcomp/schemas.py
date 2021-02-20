@@ -75,10 +75,10 @@ class File(FileBase):
 
 class FileRecords(BaseModel):
 	source_uid: int
-	record_date: str
+	record_date: Optional[str]
 	file_fields: Json
-	activity_fields: Json
-	file_revision: bytes
+	activity_fields: Optional[Json]
+	file_revision: Optional[bytes]
 
 	class Config:
 		orm_mode = True

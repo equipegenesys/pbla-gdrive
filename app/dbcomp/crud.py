@@ -167,11 +167,13 @@ def update_file(db: Session, file_to_update: str, user: int, turma: str):
         db.refresh(db_file)
 
 
-def create_file_record(db: Session, file_record: schemas.FileRecords):
-    db_file_record = models.FileRecords(name=file_record)
-    db.add(db_file_record)
+def create_file_record(db: Session, table_name: str, file_record: schemas.FileRecords):
+    db_connection = access.engine_data_db.connect()
+    db_connection.execute(
+        f'INSERT INTO \"{table_name}\" (source_uid, record_date, file_fields) VALUES({file_record.source_uid},\'{file_record.record_date}\',\'{file_record.file_fields}\');')
+    db_connection.close()
     db.commit()
 
 
-def get_file_record(db: Session, file_record: str):
-    return db.query(models.FileRecords).filter(models.FileRecords.__tablename__ == file_record).first()
+# def get_file_record(db: Session, file_record: str):
+#     return db.query(models.FileRecords).filter(models.FileRecords.__tablename__ == file_record).first()
