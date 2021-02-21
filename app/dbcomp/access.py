@@ -7,7 +7,7 @@ from dbcomp import dbconfig
 engine_app_db = create_engine(f"postgresql://micros-gdrive:{dbconfig.password}@pbla_db_1/micros-gdrive-app")
 SessionLocalA = sessionmaker(autocommit=False, autoflush=False, bind=engine_app_db)
 BaseA = declarative_base()
-BaseA.metadata.create_all(bind=engine_app_db)
+# BaseA.metadata.create_all(bind=engine_app_db)
 
 def get_app_db():
     db = SessionLocalA()

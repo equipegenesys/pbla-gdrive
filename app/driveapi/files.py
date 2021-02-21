@@ -66,20 +66,7 @@ def list_files(user_id: int, db: Session = Depends(access.get_app_db), db_data: 
 								if crud.get_files(db=db, file=file_schema) == None:
 									crud.create_file(
 										db, file_schema, db_user, turma)
-
-									metadata = get_file_metadata(
-										user_id=user_id, resource_id=file_schema.driveapi_fileid)
-									activity = get_file_activity(
-										user_id=user_id, resource_id=file_schema.driveapi_fileid)
-
-									file_record = schemas.FileRecords
-									file_record.source_uid = user_id
-									file_record.file_fields = metadata
-									file_record.activity_fields = activity
-
-									create_file_record(
-										db_app=db_app, db_data=db_data, file_record=file_record)
-
+									add_file_record(user_id=user_id, resource_id=file['id'], db_app=db, db_data=db_data)
 								else:
 									crud.update_file(
 										db=db, file_to_update=file['id'], user=user_id, turma=turma.pblacore_sku_turma)
@@ -96,20 +83,7 @@ def list_files(user_id: int, db: Session = Depends(access.get_app_db), db_data: 
 									if crud.get_files(db=db, file=file_schema) == None:
 										crud.create_file(
 											db, file_schema, db_user, turma)
-
-										metadata = get_file_metadata(
-											user_id=user_id, resource_id=file_schema.driveapi_fileid)
-										activity = get_file_activity(
-											user_id=user_id, resource_id=file_schema.driveapi_fileid)
-
-										file_record = schemas.FileRecords
-										file_record.source_uid = user_id
-										file_record.file_fields = metadata
-										file_record.activity_fields = activity
-
-										create_file_record(
-											db_app=db_app, db_data=db_data, file_record=file_record)
-
+										add_file_record(user_id=user_id, resource_id=file['id'], db_app=db, db_data=db_data)
 									else:
 										crud.update_file(
 											db=db, file_to_update=file['id'], user=user_id, turma=turma.pblacore_sku_turma)
@@ -216,5 +190,4 @@ def create_file_record(file_record: schemas.FileRecords, db_app: Session = Depen
 	now = datetime.now()
 	file_record.record_date = now.strftime("%d/%m/%Y, %H:%M:%S")
 
-	crud.create_file_record(
-		db=db_data, table_name=table_name, file_record=file_record)
+	crud.create_file_record(db=db_data, table_name=table_name, file_record=file_record)

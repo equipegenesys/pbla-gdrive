@@ -90,5 +90,5 @@ def add_user_turma(turma: schemas.TurmaAdd, db: Session = Depends(access.get_app
 						# listar arquivos (o que já atualiza a tabela de arquivos e cria tabelas individuais para cada um)
 						print("é 2")
 						files.list_files(db=db, user_id=user.pblacore_uid)
-			return f"A turma {turma.pblacore_sku_turma} já existia. Os usuários {users_created} foram criados e adicionados à turma. Os usuários {users_added} já existiam e foram adicionados."
+			return f"A turma {turma.pblacore_sku_turma} foi criada. Os usuários {users_created} foram criados e adicionados à turma. Os usuários {users_added} já existiam e foram adicionados."
 	return {"msg": "Http POST veio sem uma lista de usuários (estudantes). Nada foi feito."}

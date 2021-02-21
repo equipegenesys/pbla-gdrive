@@ -2,7 +2,7 @@ from __future__ import annotations
 from sqlalchemy import Table, Boolean, Column, ForeignKey, Integer, String, PickleType
 from sqlalchemy import LargeBinary, JSON
 from sqlalchemy.orm import relationship
-from .access import BaseA, BaseB, engine_data_db
+from .access import BaseA, BaseB, engine_data_db, engine_app_db
 import sqlalchemy.types as types
 
 
@@ -95,3 +95,5 @@ def tableCreator(tablename):
 		BaseB.metadata.create_all(bind=engine_data_db)
 		return {"msg": "Tabela do arquivo foi criada no banco de dados"}
 	return {"msg": "Tabela do arquivo já existe no banco de dados"}
+
+BaseA.metadata.create_all(bind=engine_app_db)
