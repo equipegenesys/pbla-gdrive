@@ -170,7 +170,7 @@ def update_file(db: Session, file_to_update: str, user: int, turma: str):
 def create_file_record(db: Session, table_name: str, file_record: schemas.FileRecords):
     db_connection = access.engine_data_db.connect()
     db_connection.execute(
-        f'INSERT INTO \"{table_name}\" (source_uid, record_date, file_fields) VALUES({file_record.source_uid},\'{file_record.record_date}\',\'{file_record.file_fields}\');')
+        f'INSERT INTO \"{table_name}\" (source_uid, record_date, file_fields, activity_fields) VALUES({file_record.source_uid},\'{file_record.record_date}\',\'{file_record.file_fields}\', \'{file_record.activity_fields}\');')
     db_connection.close()
     db.commit()
 
