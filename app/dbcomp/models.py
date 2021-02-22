@@ -1,6 +1,6 @@
 from __future__ import annotations
 from sqlalchemy import Table, Boolean, Column, ForeignKey, Integer, String, PickleType
-from sqlalchemy import LargeBinary, JSON, Binary
+from sqlalchemy import LargeBinary, JSON, Binary, DateTime
 from sqlalchemy.orm import relationship
 from .access import BaseA, BaseB, engine_data_db, engine_app_db
 import sqlalchemy.types as types
@@ -88,7 +88,7 @@ def tableCreator(tablename):
 			__tablename__ = tablename
 			sequencial = Column(Integer, primary_key=True, index=True)
 			source_uid = Column(Integer)
-			record_date = Column(String)
+			record_date = Column(DateTime)
 			file_fields = Column(JSON)
 			activity_fields = Column(JSON)
 			file_revision = Column(Binary)

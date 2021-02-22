@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import List, Optional
 from pydantic import BaseModel, Json
+from datetime import datetime
 
 # from .models import Tag, File, User
 
@@ -75,7 +76,7 @@ class File(FileBase):
 
 class FileRecords(BaseModel):
 	source_uid: int
-	record_date: Optional[str]
+	record_date: Optional[datetime]
 	file_fields: Json
 	activity_fields: Optional[Json]
 	file_revision: Optional[bytes]
