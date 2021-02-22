@@ -18,7 +18,8 @@ from driveapi import files, auth
 
 CLIENT_SECRETS_FILE = '/app/driveapi/credentials.json'
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
-		  'https://www.googleapis.com/auth/drive.activity.readonly']
+		  'https://www.googleapis.com/auth/drive.activity.readonly',
+		  'https://www.googleapis.com/auth/drive.readonly']
 API_SERVICE_NAME = 'drive'
 API_VERSION = 'v3'
 

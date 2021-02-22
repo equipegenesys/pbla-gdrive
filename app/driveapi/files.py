@@ -1,16 +1,20 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
-import pickle
+import pickle, io
+
+from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.errors import HttpError
 from google.auth.transport.requests import Request
 import google.oauth2.credentials
 import googleapiclient.discovery
+
 import os
 import json
 from sqlalchemy.orm import Session
 from dbcomp import crud, access, schemas, models
+from driveapi import mimetypes
 from google.auth.exceptions import RefreshError
 from . import auth
 from datetime import datetime
@@ -19,7 +23,8 @@ from datetime import datetime
 
 CLIENT_SECRETS_FILE = '/app/driveapi/credentials.json'
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
-		  'https://www.googleapis.com/auth/drive.activity.readonly']
+		  'https://www.googleapis.com/auth/drive.activity.readonly',
+		  'https://www.googleapis.com/auth/drive.readonly']
 API_SERVICE_NAME = 'drive'
 API_VERSION = 'v3'
 
@@ -102,7 +107,7 @@ def list_files(user_id: int, db: Session = Depends(access.get_app_db), db_data: 
 		return {"msg": "O usuário não está integrado ao G Drive"}
 
 
-@router.get('/api/integ/gdrive/file/metadata')
+# @router.get('/api/integ/gdrive/file/metadata')
 def get_file_metadata(user_id: int, resource_id: str, db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
 	user_status = auth.check_integ_status(user_id=user_id, db=db_app)
 	if user_status['integrado'] == True:
@@ -112,17 +117,17 @@ def get_file_metadata(user_id: int, resource_id: str, db_app: Session = Depends(
 		creds = db_user.driveapi_token
 		service = build('drive', 'v3', credentials=creds)
 		try:
-			response = service.files().get(fileId=resource_id, fields='*').execute()
-
+			response = service.files().get(fileId=resource_id, fields='*').execute()			
 			return response
 		except HttpError as err:
+			print(err)
 			if err.resp.status in [404]:
 				return {"msg": f"Arquivo com ID {resource_id} não encontrado"}
 	else:
 		return user_status
 
 
-@router.get('/api/integ/gdrive/file/activity')
+# @router.get('/api/integ/gdrive/file/activity')
 def get_file_activity(user_id: int, resource_id: str, db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
 	user_status = auth.check_integ_status(user_id=user_id, db=db_app)
 	if user_status['integrado'] == True:
@@ -159,17 +164,66 @@ def get_file_activity(user_id: int, resource_id: str, db_app: Session = Depends(
 		return user_status
 
 
+# @router.get('/api/integ/gdrive/file/download')
+def download_file(user_id: int, resource_id: str, db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
+	user_status = auth.check_integ_status(user_id=user_id, db=db_app)
+	if user_status['integrado'] == True:
+		user = schemas.UserBase
+		user.pblacore_uid = user_id
+		db_user = crud.get_user(user=user, db=db_app)
+		creds = db_user.driveapi_token
+		service = build('drive', 'v3', credentials=creds)
+		try:
+			metadata = get_file_metadata(user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data)
+			mimetype = metadata['mimeType']
+			switch = mimetypes.mimetype_mapper(mimetype)
+			if switch:
+				new_mimetype = switch()
+				request = service.files().export_media(fileId=resource_id, mimeType=new_mimetype)
+			else:
+				request = service.files().get_media(fileId=resource_id)
+
+			# filename=metadata['name']+".doc"
+			# with open(filename, 'wb') as fh:
+			# fh = open("myfile.doc", "wb")
+			fh = io.BytesIO()
+			downloader = MediaIoBaseDownload(fh, request)
+			done = False
+			while done is False:
+				status, done = downloader.next_chunk()
+				print(f"Download {str(int(status.progress() * 100))}%")
+			# print("                                             fh", fh)
+			# print("                                               fh.read",fh.read())
+			# fh.close()
+			return fh
+		except HttpError as err:
+			print(err)
+			if err.resp.status in [404]:
+				return {"msg": f"Arquivo com ID {resource_id} não encontrado"}
+	else:
+		return user_status
+
+#esta função reune as 3 categorias de dados e chama create_file_record para finalmente criar o registro
 @router.post('/api/integ/gdrive/file/add/record')
 def add_file_record(user_id: int, resource_id: str, db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
 	metadata = get_file_metadata(
 		user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data)
 	activity = get_file_activity(
 		user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data)
+	download = download_file(
+		user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data)
+	
+	file_schema = schemas.FileBase
+	file_schema.driveapi_fileid = resource_id
+	db_file = crud.get_files(db=db_app, file=file_schema)
+	models.tableCreator(tablename=db_file.local_fileid)
 
 	file_record = schemas.FileRecords
 	file_record.source_uid = user_id
 	file_record.file_fields = metadata
 	file_record.activity_fields = activity
+	file_record.file_revision = download
+	# print("                                       file_record.file_revision:", file_record.file_revision) 
 	create_file_record(db_app=db_app, db_data=db_data, file_record=file_record)
 	return "metadata e activity foram adicionadas ao banco de dados do arquivo"
 
