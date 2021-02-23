@@ -58,7 +58,7 @@ def list_files(user_id: int, db: Session = Depends(access.get_app_db), db_data: 
 				for turma in turmas:
 					full_list = []
 					sku_turma = turma.pblacore_sku_turma
-					print("                                    sku_turma",sku_turma)
+					# print("                                    sku_turma",sku_turma)
 					searchQuery = f"fullText contains '{sku_turma}' and mimeType != 'application/vnd.google-apps.folder' and trashed != true"
 
 					while True:
@@ -132,7 +132,8 @@ def get_file_metadata(user_id: int, resource_id: str, db_app: Session = Depends(
 
 
 # @router.get('/api/integ/gdrive/file/activity')
-def get_file_activity(user_id: int, resource_id: str, db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
+def get_file_activity(user_id: int, resource_id: str, db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db), **kwargs):
+	db_latest_activity = kwargs.get('db_latest_activity', None)
 	user_status = auth.check_integ_status(user_id=user_id, db=db_app)
 	if user_status['integrado'] == True:
 		user = schemas.UserBase
@@ -146,8 +147,13 @@ def get_file_activity(user_id: int, resource_id: str, db_app: Session = Depends(
 
 		try:
 			while True:
-				activityResults = service.activity().query(
-					body={'pageToken': page_token, 'pageSize': 100, "itemName": f"items/{resource_id}"}).execute()
+				if db_latest_activity == None:
+					activityResults = service.activity().query(
+						body={'pageToken': page_token, 'pageSize': 100, "itemName": f"items/{resource_id}"}).execute()
+				elif db_latest_activity:
+					activityResults = service.activity().query(
+						body={'pageToken': page_token, 'pageSize': 100, 'filter': f'time > \"{db_latest_activity}\"', "itemName": f"items/{resource_id}"}).execute()
+					# print("                                 activityResults:",activityResults)
 				response = activityResults.get('activities', [])
 				page_token = activityResults.get('nextPageToken')
 				if page_token is None and loop_index == 1:
@@ -212,11 +218,12 @@ def download_file(user_id: int, resource_id: str, db_app: Session = Depends(acce
 
 
 @router.post('/api/integ/gdrive/user/update/records')
-def update_user_file_records(user_id: int, db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
+def add_user_files_records(user_id: int, db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
 	file_list = list_files(user_id=user_id, db=db_app)
 	for turma in file_list['user']['turmas']:
 		# print(turma)
 		for file in turma['files']:
+			print("                file:", file['id'])
 			add_file_record(
 				user_id=user_id, resource_id=file['id'], db_app=db_app, db_data=db_data)
 	return {'msg': 'records added for every file associated with user'}
@@ -225,28 +232,58 @@ def update_user_file_records(user_id: int, db_app: Session = Depends(access.get_
 # esta função reune as 3 categorias de dados e chama create_file_record para finalmente criar o registro
 @router.post('/api/integ/gdrive/file/add/record')
 def add_file_record(user_id: int, resource_id: str, db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
-	metadata = get_file_metadata(
-		user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data)
-	activity = get_file_activity(
-		user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data)
-	download = download_file(
-		user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data)
 
 	file_schema = schemas.FileBase
 	file_schema.driveapi_fileid = resource_id
 	db_file = crud.get_files(db=db_app, file=file_schema)
-	models.tableCreator(tablename=db_file.local_fileid)
+	db_record = crud.retrieve_latest_record(db=db_data, table_name=db_file.local_fileid)
+	latest_file_record = db_record.fetchone()
 
-	file_record = schemas.FileRecords
-	file_record.source_uid = user_id
-	file_record.file_fields = metadata
-	file_record.activity_fields = activity
-	if download != None:
-		file_record.file_revision = download
+	if  latest_file_record == None:
+		activity = get_file_activity(
+			user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data)
+		metadata = get_file_metadata(
+			user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data)
+		download = download_file(
+			user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data)
+		file_schema = schemas.FileBase
+		file_schema.driveapi_fileid = resource_id
+		db_file = crud.get_files(db=db_app, file=file_schema)
 
-	create_file_record(db_app=db_app, db_data=db_data, file_record=file_record)
-	return "metadata e activity foram adicionadas ao banco de dados do arquivo"
+		# models.tableCreator(tablename=db_file.local_fileid)
+		file_record = schemas.FileRecords
+		file_record.source_uid = user_id
+		file_record.file_fields = metadata
+		file_record.activity_fields = activity
+		if download != None:
+			file_record.file_revision = download
+		create_file_record(db_app=db_app, db_data=db_data, file_record=file_record)
+	else:
+		db_latest_activity = latest_file_record[4][0]['timestamp']
+		activity = get_file_activity(
+			user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data, db_latest_activity=db_latest_activity)
+		print("                            activity:", activity)
+		if activity == []:
+			return {'msg': 'nada de novo para adicionar'}
+		else:
+			metadata = get_file_metadata(
+			user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data)
+			download = download_file(
+			user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data)
+			file_schema = schemas.FileBase
+			file_schema.driveapi_fileid = resource_id
+			db_file = crud.get_files(db=db_app, file=file_schema)
 
+			# models.tableCreator(tablename=db_file.local_fileid)
+			file_record = schemas.FileRecords
+			file_record.source_uid = user_id
+			file_record.file_fields = metadata
+			file_record.activity_fields = activity
+			if download != None:
+				file_record.file_revision = download
+			create_file_record(db_app=db_app, db_data=db_data, file_record=file_record)
+
+	return {'msg': 'activity, metadata and a copy of the file were added to the database'}
 
 def create_file_record(file_record: schemas.FileRecords, db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
 	file_schema = schemas.FileBase
@@ -270,13 +307,13 @@ def create_file_record(file_record: schemas.FileRecords, db_app: Session = Depen
 
 
 @router.get('/api/integ/gdrive/file/latest')
-def retrive_latest_revision(user_id: int, resource_id: str, db_app: Session = Depends(access.get_app_db),
+def retrieve_latest_revision(user_id: int, resource_id: str, db_app: Session = Depends(access.get_app_db),
 							db_data: Session = Depends(access.get_data_db)):
 	file_schema = schemas.FileBase
 	file_schema.driveapi_fileid = resource_id
 	db_file = crud.get_files(db=db_app, file=file_schema)
 	# file_schema.local_fileid = db_file.local_fileid
-	latest_file_record = crud.retrive_latest_record(
+	latest_file_record = crud.retrieve_latest_record(
 		db=db_data, table_name=db_file.local_fileid)
 	db_record = latest_file_record.fetchone()
 	file_revision_field = db_record[5]

@@ -192,7 +192,7 @@ def create_file_record(db: Session, table_name: str, file_record: schemas.FileRe
 	db_connection.close()
 
 
-def retrive_latest_record(db: Session, table_name: str):
+def retrieve_latest_record(db: Session, table_name: str):
 	with access.engine_data_db.connect() as db_connection:
 		result = db_connection.execute(
 			f'SELECT * FROM \"{table_name}\" ORDER BY sequencial DESC LIMIT 1;')  
