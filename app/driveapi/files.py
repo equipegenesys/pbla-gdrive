@@ -216,14 +216,23 @@ def download_file(user_id: int, resource_id: str, db_app: Session = Depends(acce
 	else:
 		return user_status
 
+@router.post('/api/integ/gdrive/allusers/update/records')
+def add_users_files_records(db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
+	users = db_app.query(models.User).all()
+	for user in users:
+		file_list = list_files(user_id=user.pblacore_uid, db=db_app)
+		for turma in file_list['user']['turmas']:
+			for file in turma['files']:
+				print("                file:", file['id'])
+				add_file_record(
+					user_id=user.pblacore_uid, resource_id=file['id'], db_app=db_app, db_data=db_data)
+	return {'msg': 'records added for every file associated with user'}
 
 @router.post('/api/integ/gdrive/user/update/records')
 def add_user_files_records(user_id: int, db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
 	file_list = list_files(user_id=user_id, db=db_app)
 	for turma in file_list['user']['turmas']:
-		# print(turma)
 		for file in turma['files']:
-			print("                file:", file['id'])
 			add_file_record(
 				user_id=user_id, resource_id=file['id'], db_app=db_app, db_data=db_data)
 	return {'msg': 'records added for every file associated with user'}
@@ -262,9 +271,8 @@ def add_file_record(user_id: int, resource_id: str, db_app: Session = Depends(ac
 		db_latest_activity = latest_file_record[4][0]['timestamp']
 		activity = get_file_activity(
 			user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data, db_latest_activity=db_latest_activity)
-		print("                            activity:", activity)
 		if activity == []:
-			return {'msg': 'nada de novo para adicionar'}
+			print({'msg': 'nada de novo para adicionar'})
 		else:
 			metadata = get_file_metadata(
 			user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data)
