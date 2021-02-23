@@ -4,7 +4,8 @@ from sqlalchemy import LargeBinary, JSON, Binary, DateTime
 from sqlalchemy.orm import relationship
 from .access import BaseA, BaseB, engine_data_db, engine_app_db
 import sqlalchemy.types as types
-
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
 
 user_turma_table = Table('user_turma_association', BaseA.metadata,
 						 Column('pblacore_uid', Integer,
@@ -75,6 +76,8 @@ class File(BaseA):
 	driveapi_fileid = Column(String, unique=True, index=True)
 
 	is_active = Column(Boolean, default=True)
+
+	channel_id = Column(UUID(as_uuid=True), unique=True, default=uuid.uuid4)
 
 	users = relationship("User", secondary=user_file_table,
 						 back_populates="files")

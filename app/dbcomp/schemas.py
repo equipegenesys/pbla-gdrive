@@ -56,6 +56,7 @@ class TurmaAdd(TurmaBase):
 class FileBase(BaseModel):
 	local_fileid: int
 	driveapi_fileid: str
+	channel_id: uuid.UUID
 
 class FileCreate(FileBase):
 	pass
