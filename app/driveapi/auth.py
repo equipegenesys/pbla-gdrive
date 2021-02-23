@@ -14,12 +14,13 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from dbcomp import crud, access, schemas
-from driveapi import files, auth
+from driveapi import files
 
 CLIENT_SECRETS_FILE = '/app/driveapi/credentials.json'
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
 		  'https://www.googleapis.com/auth/drive.activity.readonly',
-		  'https://www.googleapis.com/auth/drive.readonly']
+		  'https://www.googleapis.com/auth/drive.readonly',
+		  'https://www.googleapis.com/auth/userinfo.profile']
 API_SERVICE_NAME = 'drive'
 API_VERSION = 'v3'
 
@@ -113,15 +114,31 @@ def oauthlisten(state: str, code: str, scope: str, db: Session = Depends(access.
 		# statement = text("""UPDATE users SET driveapi_token = '0' VALUES(:id, :title, :primary_author)""")
 		# print(user.pblacore_token)
 		crud.update_token(db=db, user_to_update=user)
-		integ_status = auth.check_integ_status(db=db, user_id=user.pblacore_uid)
+		integ_status = check_integ_status(db=db, user_id=user.pblacore_uid)
 		if integ_status['integrado'] == True:
 			# listar arquivos (o que já atualiza a tabela de arquivos e cria tabelas individuais para cada um)
 			files.list_files(db=db, user_id=user.pblacore_uid)
+		add_gaccount_info(db=db, user_id=state)
 		return integ_status
 	else:
 		crud.create_user_fromgdrive(db=db, user_to_create=user)
-		integ_status = auth.check_integ_status(db=db, user_id=user.pblacore_uid)
+		integ_status = check_integ_status(db=db, user_id=user.pblacore_uid)
 		if integ_status['integrado'] == True:
 			# listar arquivos (o que já atualiza a tabela de arquivos e cria tabelas individuais para cada um)
 			files.list_files(db=db, user_id=user.pblacore_uid)
+		add_gaccount_info(db=db, user_id=state)
 		return integ_status
+
+# @router.get('/api/integ/gdrive/add/gaccountinfo')
+def add_gaccount_info(user_id: int, db: Session = Depends(access.get_app_db)):
+	user_schema = schemas.UserBase
+	user_schema.pblacore_uid = user_id
+	
+	db_user = crud.get_user(db=db, user=user_schema)
+	creds = db_user.driveapi_token
+	service = build('people', 'v1', credentials=creds)
+	
+	gaccount = service.people().get(resourceName='people/me', personFields='metadata').execute()
+	user_schema.driveapi_account_id = gaccount['resourceName']
+	
+	crud.add_gaccount_info(db=db, user_to_update=user_schema)

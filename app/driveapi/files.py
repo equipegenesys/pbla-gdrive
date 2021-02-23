@@ -26,7 +26,8 @@ from datetime import datetime
 CLIENT_SECRETS_FILE = '/app/driveapi/credentials.json'
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
           'https://www.googleapis.com/auth/drive.activity.readonly',
-          'https://www.googleapis.com/auth/drive.readonly']
+          'https://www.googleapis.com/auth/drive.readonly',
+		  'https://www.googleapis.com/auth/userinfo.profile']
 API_SERVICE_NAME = 'drive'
 API_VERSION = 'v3'
 
@@ -213,7 +214,7 @@ def download_file(user_id: int, resource_id: str, db_app: Session = Depends(acce
 def update_user_file_records(user_id: int, db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
     file_list = list_files(user_id=user_id, db=db_app)
     for turma in file_list['user']['turmas']:
-        print(turma)
+        # print(turma)
         for file in turma['files']:
             add_file_record(
                 user_id=user_id, resource_id=file['id'], db_app=db_app, db_data=db_data)
@@ -278,6 +279,6 @@ def retrive_latest_revision(user_id: int, resource_id: str, db_app: Session = De
         db=db_data, table_name=db_file.local_fileid)
     db_record = latest_file_record.fetchone()
     file_revision_field = db_record[5]
-    fh = open("myfile.docx", "wb")
+    fh = open("myfile", "wb")
     fh.write(file_revision_field)
     fh.close

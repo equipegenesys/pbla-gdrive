@@ -71,6 +71,15 @@ def update_core_user_data(db: Session, user_to_update: schemas.UserBase):
 		return {"msg": f"O usuário do PBL Analytics com ID {db_user.pblacore_uid} teve dados de e-mail e nome agregados."}
 	return {"msg": "Não existe um usuário cadastrado com esse pblacore_uid"}
 
+def add_gaccount_info(db: Session, user_to_update: schemas.UserBase):
+	if db.query(models.User).filter(models.User.pblacore_uid == user_to_update.pblacore_uid).first():
+		db_user = db.query(models.User).filter(
+			models.User.pblacore_uid == user_to_update.pblacore_uid).first()
+		db_user.driveapi_account_id = user_to_update.driveapi_account_id
+		db.commit()
+		db.refresh(db_user)
+		return {"msg": f"O usuário do PBL Analytics com ID {db_user.pblacore_uid} teve o account id do google agregado."}
+	return {"msg": "Não existe um usuário cadastrado com esse pblacore_uid"}
 
 def get_turma(db: Session, turma: schemas.TurmaBase):
 	return db.query(models.Turma).filter(models.Turma.pblacore_sku_turma == turma).first()
