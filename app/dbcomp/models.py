@@ -1,5 +1,5 @@
 from __future__ import annotations
-from sqlalchemy import Table, Boolean, Column, ForeignKey, Integer, String, PickleType
+from sqlalchemy import Table, Boolean, Column, ForeignKey, Integer, String, PickleType, BigInteger
 from sqlalchemy import LargeBinary, JSON, Binary, DateTime
 from sqlalchemy.orm import relationship
 from .access import BaseA, BaseB, engine_data_db, engine_app_db
@@ -32,7 +32,7 @@ file_turma_table = Table('file_turma_association', BaseA.metadata,
 class User(BaseA):
 	__tablename__ = "users"
 
-	pblacore_uid = Column(Integer, primary_key=True, index=True)
+	pblacore_uid = Column(BigInteger, primary_key=True, index=True)
 	pblacore_email = Column(String)
 	pblacore_nome = Column(String)
 

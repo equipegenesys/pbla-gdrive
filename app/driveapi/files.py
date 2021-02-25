@@ -34,11 +34,16 @@ API_VERSION = 'v3'
 # FILE_FIELDS = 'nextPageToken, files(id, name, starred, description, mimeType, properties, appProperties, version, thumbnailLink, viewedByMe, viewedByMeTime, createdTime, modifiedTime, modifiedByMeTime, sharedWithMeTime, sharingUser, owners, lastModifyingUser, lastModifyingUser, ownedByMe, fileExtension, size, md5Checksum, contentHints)'
 FILE_FIELDS = 'nextPageToken, files(id, name, mimeType, fileExtension)'
 
+BLOCKED_MIMETYPES = ["application/vnd.google-apps.form",
+					"application/vnd.google-apps.shortcut"]
+
+
 router = APIRouter()
 
 
 @router.get('/api/integ/gdrive/status/user/{user_id}/files/')
 def list_files(user_id: int, db: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
+	user_status = auth.check_integ_status(user_id=user_id, db=db)
 	user = schemas.UserBase
 	user.pblacore_uid = user_id
 	db_user = crud.get_user(db=db, user=user)
@@ -50,7 +55,7 @@ def list_files(user_id: int, db: Session = Depends(access.get_app_db), db_data: 
 		previous_file = None
 		loop_index = 1
 		msg = []
-		if db_user and db_user.driveapi_token:
+		if user_status['integrado'] == True:
 			creds = db_user.driveapi_token
 			service = build('drive', 'v3', credentials=creds)
 			if turmas:
@@ -188,7 +193,7 @@ def download_file(user_id: int, resource_id: str, db_app: Session = Depends(acce
 				user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data)
 			mimetype = metadata['mimeType']
 
-			if mimetype != "application/vnd.google-apps.form":
+			if mimetype not in BLOCKED_MIMETYPES:
 
 				switch = mimetypes.mimetype_mapper(mimetype)
 				if switch:
@@ -220,13 +225,17 @@ def download_file(user_id: int, resource_id: str, db_app: Session = Depends(acce
 def add_users_files_records(db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
 	users = db_app.query(models.User).all()
 	for user in users:
-		file_list = list_files(user_id=user.pblacore_uid, db=db_app)
-		for turma in file_list['user']['turmas']:
-			for file in turma['files']:
-				print("                file:", file['id'])
-				add_file_record(
-					user_id=user.pblacore_uid, resource_id=file['id'], db_app=db_app, db_data=db_data)
-	return {'msg': 'records added for every file associated with user'}
+		user_status = auth.check_integ_status(user_id=user.pblacore_uid, db=db_app)
+		if user_status['integrado'] == True:
+			file_list = list_files(user_id=user.pblacore_uid, db=db_app)
+			# print(user_id)
+			for turma in file_list['user']['turmas']:
+				for file in turma['files']:
+					add_file_record(
+						user_id=user.pblacore_uid, resource_id=file['id'], db_app=db_app, db_data=db_data)
+		else: print("user com id",user.pblacore_uid,"não está integrado")
+	return {'msg': 'records added for EVERY file associated with EVERY user'}
+
 
 @router.post('/api/integ/gdrive/user/update/records')
 def add_user_files_records(user_id: int, db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
@@ -235,7 +244,7 @@ def add_user_files_records(user_id: int, db_app: Session = Depends(access.get_ap
 		for file in turma['files']:
 			add_file_record(
 				user_id=user_id, resource_id=file['id'], db_app=db_app, db_data=db_data)
-	return {'msg': 'records added for every file associated with user'}
+	return {'msg': 'records added for EVERY file associated with user'}
 
 
 # esta função reune as 3 categorias de dados e chama create_file_record para finalmente criar o registro
@@ -272,7 +281,8 @@ def add_file_record(user_id: int, resource_id: str, db_app: Session = Depends(ac
 		activity = get_file_activity(
 			user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data, db_latest_activity=db_latest_activity)
 		if activity == []:
-			print({'msg': 'nada de novo para adicionar'})
+			return {'msg': 'nada de novo para adicionar'}
+			# print({'msg': 'nada de novo para adicionar'})
 		else:
 			metadata = get_file_metadata(
 			user_id=user_id, resource_id=resource_id, db_app=db_app, db_data=db_data)
