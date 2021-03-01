@@ -49,30 +49,45 @@ def list_files(user_id: int, db: Session = Depends(access.get_app_db), db_data: 
 	db_user = crud.get_user(db=db, user=user)
 	if type(db_user) == dict:
 		return db_user
-	else:
+	elif user_status['integrado'] == True:
 		turmas = db_user.turmas
 		page_token = None
 		previous_file = None
 		loop_index = 1
 		msg = []
-		if user_status['integrado'] == True:
-			creds = db_user.driveapi_token
-			service = build('drive', 'v3', credentials=creds)
-			if turmas:
-				result = {'user': {'pblcore_uid': user_id, 'turmas': []}}
-				for turma in turmas:
-					full_list = []
-					sku_turma = turma.pblacore_sku_turma
-					# print("                                    sku_turma",sku_turma)
-					searchQuery = f"fullText contains '{sku_turma}' and mimeType != 'application/vnd.google-apps.folder' and trashed != true"
+		creds = db_user.driveapi_token
+		service = build('drive', 'v3', credentials=creds)
+		if turmas:
+			result = {'user': {'pblcore_uid': user_id, 'turmas': []}}
+			for turma in turmas:
+				full_list = []
+				sku_turma = turma.pblacore_sku_turma
+				# print("                                    sku_turma",sku_turma)
+				searchQuery = f"fullText contains '{sku_turma}' and mimeType != 'application/vnd.google-apps.folder' and trashed != true"
 
-					while True:
-						response = service.files().list(pageSize=100, q=searchQuery,
-														spaces='drive',
-														fields=FILE_FIELDS, pageToken=page_token).execute()
-						for file in response.get('files', []):
-							file_schema = schemas.File
-							if loop_index is 1:
+				while True:
+					response = service.files().list(pageSize=100, q=searchQuery,
+													spaces='drive',
+													fields=FILE_FIELDS, pageToken=page_token).execute()
+					for file in response.get('files', []):
+						file_schema = schemas.File
+						if loop_index is 1:
+							full_list.append(file)
+
+							file_schema.driveapi_fileid = file['id']
+							file_schema.is_active = True
+							if crud.get_files(db=db, file=file_schema) == None:
+								crud.create_file(
+									db, file_schema, db_user, turma)
+							else:
+								crud.update_file(
+									db=db, file_to_update=file['id'], user=user_id, turma=turma.pblacore_sku_turma)
+							msg.append(
+								{"msg": f"Arquivo "+"'"+file['name']+"'"+" já existe na base de dados"})
+
+						else:
+							last_item_index = len(full_list) - 1
+							if file['id'] != full_list[last_item_index]['id']:
 								full_list.append(file)
 
 								file_schema.driveapi_fileid = file['id']
@@ -86,34 +101,18 @@ def list_files(user_id: int, db: Session = Depends(access.get_app_db), db_data: 
 								msg.append(
 									{"msg": f"Arquivo "+"'"+file['name']+"'"+" já existe na base de dados"})
 
-							else:
-								last_item_index = len(full_list) - 1
-								if file['id'] != full_list[last_item_index]['id']:
-									full_list.append(file)
+						loop_index = loop_index + 1
+					page_token = response.get('nextPageToken', None)
+					if page_token is None:
+						break
+				loop_index = 1
+				{'user': {'pblcore_uid': user_id, 'turmas': []}}
 
-									file_schema.driveapi_fileid = file['id']
-									file_schema.is_active = True
-									if crud.get_files(db=db, file=file_schema) == None:
-										crud.create_file(
-											db, file_schema, db_user, turma)
-									else:
-										crud.update_file(
-											db=db, file_to_update=file['id'], user=user_id, turma=turma.pblacore_sku_turma)
-									msg.append(
-										{"msg": f"Arquivo "+"'"+file['name']+"'"+" já existe na base de dados"})
-
-							loop_index = loop_index + 1
-						page_token = response.get('nextPageToken', None)
-						if page_token is None:
-							break
-					loop_index = 1
-					{'user': {'pblcore_uid': user_id, 'turmas': []}}
-
-					result['user']['turmas'].append(
-						{'sku_turma': sku_turma, 'files': full_list})
-				return result
-			return {"msg": "O usuário não está em nenhuma turma"}
-		return {"msg": "O usuário não está integrado ao G Drive"}
+				result['user']['turmas'].append(
+					{'sku_turma': sku_turma, 'files': full_list})
+			return result
+		return {"user_in_turmas": False}
+	return {"integrado": False}
 
 
 # @router.get('/api/integ/gdrive/file/metadata')
@@ -228,7 +227,7 @@ def add_users_files_records(db_app: Session = Depends(access.get_app_db), db_dat
 		user_status = auth.check_integ_status(user_id=user.pblacore_uid, db=db_app)
 		if user_status['integrado'] == True:
 			file_list = list_files(user_id=user.pblacore_uid, db=db_app)
-			# print(user_id)
+			print(user.pblacore_uid)
 			for turma in file_list['user']['turmas']:
 				for file in turma['files']:
 					add_file_record(
@@ -239,12 +238,17 @@ def add_users_files_records(db_app: Session = Depends(access.get_app_db), db_dat
 
 @router.post('/api/integ/gdrive/user/update/records')
 def add_user_files_records(user_id: int, db_app: Session = Depends(access.get_app_db), db_data: Session = Depends(access.get_data_db)):
+	user_status = auth.check_integ_status(user_id=user_id, db=db_app)
 	file_list = list_files(user_id=user_id, db=db_app)
-	for turma in file_list['user']['turmas']:
-		for file in turma['files']:
-			add_file_record(
-				user_id=user_id, resource_id=file['id'], db_app=db_app, db_data=db_data)
-	return {'msg': 'records added for EVERY file associated with user'}
+	print(file_list)
+	if user_status['integrado'] == True and 'user_in_turmas' not in file_list:
+		for turma in file_list['user']['turmas']:
+			for file in turma['files']:
+				add_file_record(
+					user_id=user_id, resource_id=file['id'], db_app=db_app, db_data=db_data)
+		return {'msg': 'records added for EVERY file associated with user'}
+	return {"msg": "O usuário não está integrado ao G Drive"}
+	
 
 
 # esta função reune as 3 categorias de dados e chama create_file_record para finalmente criar o registro
