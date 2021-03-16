@@ -328,17 +328,17 @@ def create_file_record(file_record: schemas.FileRecords, db_app: Session = Depen
 		db=db_data, table_name=table_name, file_record=file_record)
 
 
-@router.get('/api/integ/gdrive/file/latest')
-def retrieve_latest_revision(user_id: int, resource_id: str, db_app: Session = Depends(access.get_app_db),
-							db_data: Session = Depends(access.get_data_db)):
-	file_schema = schemas.FileBase
-	file_schema.driveapi_fileid = resource_id
-	db_file = crud.get_files(db=db_app, file=file_schema)
-	# file_schema.local_fileid = db_file.local_fileid
-	latest_file_record = crud.retrieve_latest_record(
-		db=db_data, table_name=db_file.local_fileid)
-	db_record = latest_file_record.fetchone()
-	file_revision_field = db_record[5]
-	fh = open("myfile", "wb")
-	fh.write(file_revision_field)
-	fh.close
+# @router.get('/api/integ/gdrive/file/latest')
+# def retrieve_latest_revision(user_id: int, resource_id: str, db_app: Session = Depends(access.get_app_db),
+# 							db_data: Session = Depends(access.get_data_db)):
+# 	file_schema = schemas.FileBase
+# 	file_schema.driveapi_fileid = resource_id
+# 	db_file = crud.get_files(db=db_app, file=file_schema)
+# 	# file_schema.local_fileid = db_file.local_fileid
+# 	latest_file_record = crud.retrieve_latest_record(
+# 		db=db_data, table_name=db_file.local_fileid)
+# 	db_record = latest_file_record.fetchone()
+# 	file_revision_field = db_record[5]
+# 	fh = open("myfile", "wb")
+# 	fh.write(file_revision_field)
+# 	fh.close
