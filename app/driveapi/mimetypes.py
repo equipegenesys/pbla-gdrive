@@ -1,3 +1,9 @@
+# this module implements a simple js-like switch to return a mapped mimetype format.
+# if original_mimetype is native google document, return docx
+# if original_mimetype is native google spreadsheets, return xlsx
+# if original_mimetype is native google slides, return pptx
+# if original_mimetype is native google drawings, return png
+
 def mimetype_mapper(original_mimetype: str):
 
     mimetypes = {'application/vnd.google-apps.document': google_document, 
