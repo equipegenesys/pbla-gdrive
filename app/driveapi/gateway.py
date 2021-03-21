@@ -33,7 +33,7 @@ def add_user_turma(turma: schemas.TurmaAdd, db: Session = Depends(access.get_app
 		users_already = []
 		users_added = []
 		# se a turma já existe na db...
-		if crud.get_turma(db=db, turma=turma.pblacore_sku_turma) != None:
+		if crud.get_turma(db=db, turma=turma.pblacore_tag_turma) != None:
 			# para cada usuário listado na turma...
 			for user in turma.users:
 				# se usuário não existe...
@@ -48,7 +48,7 @@ def add_user_turma(turma: schemas.TurmaAdd, db: Session = Depends(access.get_app
 				else:
 					crud.update_core_user_data(db=db, user_to_update=user)
 					# se usuário já estiver nessa turma
-					if crud.check_user_in_turma(db=db, turma=turma.pblacore_sku_turma, user=user.pblacore_uid):
+					if crud.check_user_in_turma(db=db, turma=turma.pblacore_tag_turma, user=user.pblacore_uid):
 						# adicione nome do user à lista de usuários que já existiam e estavam na turma
 						users_already.append(user.pblacore_nome)
 					# se usuário ainda não estiver na turma
@@ -64,7 +64,7 @@ def add_user_turma(turma: schemas.TurmaAdd, db: Session = Depends(access.get_app
 						# listar arquivos (o que já atualiza a tabela de arquivos e cria tabelas individuais para cada um)
 						print("é 1")				
 						files.list_files(db=db, user_id=user.pblacore_uid)
-			return f"A turma {turma.pblacore_sku_turma} já existia. Os usuários {users_created} foram criados e adicionados à turma. Os usuários {users_added} já existiam e foram adicionados. Os usuários {users_already} já estavam na turma."
+			return f"A turma {turma.pblacore_tag_turma} já existia. Os usuários {users_created} foram criados e adicionados à turma. Os usuários {users_added} já existiam e foram adicionados. Os usuários {users_already} já estavam na turma."
 		# se turma não existe na db
 		else:
 			# crie turma
@@ -92,5 +92,5 @@ def add_user_turma(turma: schemas.TurmaAdd, db: Session = Depends(access.get_app
 						# listar arquivos (o que já atualiza a tabela de arquivos e cria tabelas individuais para cada um)
 						print("é 2")
 						files.list_files(db=db, user_id=user.pblacore_uid)
-			return f"A turma {turma.pblacore_sku_turma} foi criada. Os usuários {users_created} foram criados e adicionados à turma. Os usuários {users_added} já existiam e foram adicionados."
+			return f"A turma {turma.pblacore_tag_turma} foi criada. Os usuários {users_created} foram criados e adicionados à turma. Os usuários {users_added} já existiam e foram adicionados."
 	return {"msg": "Http POST veio sem uma lista de usuários (estudantes). Nada foi feito."}

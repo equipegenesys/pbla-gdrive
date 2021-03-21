@@ -30,7 +30,7 @@ class User(UserBase):
 		orm_mode = True
 
 class TurmaBase(BaseModel):
-	pblacore_sku_turma: str
+	pblacore_tag_turma: str
 	pblacore_disci_turma: str
 	pblacore_ano_turma: int
 	pblacore_semestre_turma: int

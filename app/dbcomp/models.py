@@ -10,8 +10,8 @@ import uuid
 user_turma_table = Table('user_turma_association', BaseA.metadata,
 						 Column('pblacore_uid', Integer,
 								ForeignKey('users.pblacore_uid')),
-						 Column('pblacore_sku_turma', String,
-								ForeignKey('turmas.pblacore_sku_turma'))
+						 Column('pblacore_tag_turma', String,
+								ForeignKey('turmas.pblacore_tag_turma'))
 						 )
 
 user_file_table = Table('user_file_association', BaseA.metadata,
@@ -24,8 +24,8 @@ user_file_table = Table('user_file_association', BaseA.metadata,
 file_turma_table = Table('file_turma_association', BaseA.metadata,
 						 Column('local_fileid', Integer,
 								ForeignKey('files.local_fileid')),
-						 Column('pblacore_sku_turma', String,
-								ForeignKey('turmas.pblacore_sku_turma'))
+						 Column('pblacore_tag_turma', String,
+								ForeignKey('turmas.pblacore_tag_turma'))
 						 )
 
 
@@ -56,7 +56,7 @@ class User(BaseA):
 class Turma(BaseA):
 	__tablename__ = "turmas"
 
-	pblacore_sku_turma = Column(String, primary_key=True, index=True)
+	pblacore_tag_turma = Column(String, primary_key=True, index=True)
 	pblacore_disci_turma = Column(String, index=True)
 	pblacore_ano_turma = Column(Integer, index=True)
 	pblacore_semestre_turma = Column(Integer, index=True)

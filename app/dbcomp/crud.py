@@ -82,11 +82,11 @@ def add_gaccount_info(db: Session, user_to_update: schemas.UserBase):
 	return {"msg": "Não existe um usuário cadastrado com esse pblacore_uid"}
 
 def get_turma(db: Session, turma: schemas.TurmaBase):
-	return db.query(models.Turma).filter(models.Turma.pblacore_sku_turma == turma).first()
+	return db.query(models.Turma).filter(models.Turma.pblacore_tag_turma == turma).first()
 
 
 def create_turma(db: Session, turma_to_create: schemas.TurmaAdd):
-	db_turma = models.Turma(pblacore_sku_turma=turma_to_create.pblacore_sku_turma,
+	db_turma = models.Turma(pblacore_tag_turma=turma_to_create.pblacore_tag_turma,
 							pblacore_disci_turma=turma_to_create.pblacore_disci_turma,
 							pblacore_ano_turma=turma_to_create.pblacore_ano_turma,
 							pblacore_semestre_turma=turma_to_create.pblacore_semestre_turma)
@@ -107,7 +107,7 @@ def create_turma(db: Session, turma_to_create: schemas.TurmaAdd):
 
 
 def create_turma_simples(db: Session, turma_to_create: schemas.TurmaBase):
-	db_turma = models.Turma(pblacore_sku_turma=turma_to_create.pblacore_sku_turma,
+	db_turma = models.Turma(pblacore_tag_turma=turma_to_create.pblacore_tag_turma,
 							pblacore_disci_turma=turma_to_create.pblacore_disci_turma,
 							pblacore_ano_turma=turma_to_create.pblacore_ano_turma,
 							pblacore_semestre_turma=turma_to_create.pblacore_semestre_turma)
@@ -116,7 +116,7 @@ def create_turma_simples(db: Session, turma_to_create: schemas.TurmaBase):
 
 
 def add_user_turma(db: Session, turma: schemas.TurmaAddUser):
-	selected_turma = db.query(models.Turma).get(turma.pblacore_sku_turma)
+	selected_turma = db.query(models.Turma).get(turma.pblacore_tag_turma)
 	if turma.users is not None:
 		user_query = schemas.UserBase
 		for user in turma.users:
@@ -134,7 +134,7 @@ def add_user_turma(db: Session, turma: schemas.TurmaAddUser):
 
 
 def add_user_turma_simples(db: Session, turma: str, user: str):
-	selected_turma = db.query(models.Turma).get(turma.pblacore_sku_turma)
+	selected_turma = db.query(models.Turma).get(turma.pblacore_tag_turma)
 	db_user = get_user(db=db, user=user)
 	selected_turma.users.append(db_user)
 	db.commit()
@@ -142,7 +142,7 @@ def add_user_turma_simples(db: Session, turma: str, user: str):
 
 def check_user_in_turma(db: Session, turma: str, user: str):
 	rquery = db.query(models.user_turma_table).join(models.Turma).join(models.User).filter(
-		models.Turma.pblacore_sku_turma == turma, models.User.pblacore_uid == user).first()
+		models.Turma.pblacore_tag_turma == turma, models.User.pblacore_uid == user).first()
 	return rquery
 
 
@@ -166,7 +166,7 @@ def update_file(db: Session, file_to_update: str, user: int, turma: str):
 	db_user = db.query(models.User).filter(
 		models.User.pblacore_uid == user).first()
 	db_turma = db.query(models.Turma).filter(
-		models.Turma.pblacore_sku_turma == turma).first()
+		models.Turma.pblacore_tag_turma == turma).first()
 	if db.query(models.File).filter(models.File.driveapi_fileid == file_to_update).first():
 		db_file = db.query(models.File).filter(
 			models.File.driveapi_fileid == file_to_update).first()
