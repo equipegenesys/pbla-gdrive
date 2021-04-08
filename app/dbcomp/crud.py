@@ -84,71 +84,6 @@ def add_gaccount_info(db: Session, user_to_update: schemas.UserBase):
 		return {"msg": f"O usuário do PBL Analytics com ID {db_user.pblacore_uid} teve o account id do google agregado."}
 	return {"msg": "Não existe um usuário cadastrado com esse pblacore_uid"}
 
-# Receives turma (class) tag in UserBase, gets DB data for this turma, returns it
-def get_turma(db: Session, turma: schemas.TurmaBase):
-	return db.query(models.Turma).filter(models.Turma.pblacore_tag_turma == turma).first()
-
-# creates a new turma (class) in DB and add users to it
-def create_turma(db: Session, turma_to_create: schemas.TurmaAdd):
-	db_turma = models.Turma(pblacore_tag_turma=turma_to_create.pblacore_tag_turma,
-							pblacore_disci_turma=turma_to_create.pblacore_disci_turma,
-							pblacore_ano_turma=turma_to_create.pblacore_ano_turma,
-							pblacore_semestre_turma=turma_to_create.pblacore_semestre_turma)
-	db.add(db_turma)
-	db.commit()
-
-	if turma_to_create.users != None:
-		user_query = schemas.UserBase
-		for user in turma_to_create.users:
-			user_query.pblacore_uid = user
-			db_user = get_user(db=db, user=user_query)
-			if db_user:
-				db_turma.users.append(db_user)
-				db.commit()
-
-	db.refresh(db_turma)
-	return db_turma
-
-# creates a new turma (class) in DB without adding users
-def create_turma_simples(db: Session, turma_to_create: schemas.TurmaBase):
-	db_turma = models.Turma(pblacore_tag_turma=turma_to_create.pblacore_tag_turma,
-							pblacore_disci_turma=turma_to_create.pblacore_disci_turma,
-							pblacore_ano_turma=turma_to_create.pblacore_ano_turma,
-							pblacore_semestre_turma=turma_to_create.pblacore_semestre_turma)
-	db.add(db_turma)
-	db.commit()
-
-# add specific users to turma 
-def add_user_turma(db: Session, turma: schemas.TurmaAddUser):
-	selected_turma = db.query(models.Turma).get(turma.pblacore_tag_turma)
-	if turma.users is not None:
-		user_query = schemas.UserBase
-		for user in turma.users:
-			user_query.pblacore_uid = user
-			db_user = get_user(db=db, user=user_query)
-			if db_user is not None:
-				selected_turma.users.append(db_user)
-				db.commit()
-		estudantes = {'estudantes': []}
-		for user in selected_turma.users:
-			userDict = user.basicData()
-			estudantes['estudantes'].append(userDict)
-		return {'turma': estudantes}
-	return {"msg": "Não a há usuários no corpo do HTTP POST"}
-
-# add specific users to turma (simplified)
-def add_user_turma_simples(db: Session, turma: str, user: str):
-	selected_turma = db.query(models.Turma).get(turma.pblacore_tag_turma)
-	db_user = get_user(db=db, user=user)
-	selected_turma.users.append(db_user)
-	db.commit()
-
-# check if user is in turma (this should not be here?)
-def check_user_in_turma(db: Session, turma: str, user: str):
-	rquery = db.query(models.user_turma_table).join(models.Turma).join(models.User).filter(
-		models.Turma.pblacore_tag_turma == turma, models.User.pblacore_uid == user).first()
-	return rquery
-
 # get the data for a file
 def get_files(db: Session, file: schemas.FileBase):
 	return db.query(models.File).filter(models.File.driveapi_fileid == file.driveapi_fileid).first()
@@ -203,3 +138,68 @@ def retrieve_latest_record(db: Session, table_name: str):
 			f'SELECT * FROM \"{table_name}\" ORDER BY sequencial DESC LIMIT 1;')  
 		db_connection.close()
 		return result
+
+# # Receives turma (class) tag in UserBase, gets DB data for this turma, returns it
+# def get_turma(db: Session, turma: schemas.TurmaBase):
+# 	return db.query(models.Turma).filter(models.Turma.pblacore_tag_turma == turma).first()
+
+# # creates a new turma (class) in DB and add users to it
+# def create_turma(db: Session, turma_to_create: schemas.TurmaAdd):
+# 	db_turma = models.Turma(pblacore_tag_turma=turma_to_create.pblacore_tag_turma,
+# 							pblacore_disci_turma=turma_to_create.pblacore_disci_turma,
+# 							pblacore_ano_turma=turma_to_create.pblacore_ano_turma,
+# 							pblacore_semestre_turma=turma_to_create.pblacore_semestre_turma)
+# 	db.add(db_turma)
+# 	db.commit()
+
+# 	if turma_to_create.users != None:
+# 		user_query = schemas.UserBase
+# 		for user in turma_to_create.users:
+# 			user_query.pblacore_uid = user
+# 			db_user = get_user(db=db, user=user_query)
+# 			if db_user:
+# 				db_turma.users.append(db_user)
+# 				db.commit()
+
+# 	db.refresh(db_turma)
+# 	return db_turma
+
+# # creates a new turma (class) in DB without adding users
+# def create_turma_simples(db: Session, turma_to_create: schemas.TurmaBase):
+# 	db_turma = models.Turma(pblacore_tag_turma=turma_to_create.pblacore_tag_turma,
+# 							pblacore_disci_turma=turma_to_create.pblacore_disci_turma,
+# 							pblacore_ano_turma=turma_to_create.pblacore_ano_turma,
+# 							pblacore_semestre_turma=turma_to_create.pblacore_semestre_turma)
+# 	db.add(db_turma)
+# 	db.commit()
+
+# # add specific users to turma 
+# def add_user_turma(db: Session, turma: schemas.TurmaAddUser):
+# 	selected_turma = db.query(models.Turma).get(turma.pblacore_tag_turma)
+# 	if turma.users is not None:
+# 		user_query = schemas.UserBase
+# 		for user in turma.users:
+# 			user_query.pblacore_uid = user
+# 			db_user = get_user(db=db, user=user_query)
+# 			if db_user is not None:
+# 				selected_turma.users.append(db_user)
+# 				db.commit()
+# 		estudantes = {'estudantes': []}
+# 		for user in selected_turma.users:
+# 			userDict = user.basicData()
+# 			estudantes['estudantes'].append(userDict)
+# 		return {'turma': estudantes}
+# 	return {"msg": "Não a há usuários no corpo do HTTP POST"}
+
+# # add specific users to turma (simplified)
+# def add_user_turma_simples(db: Session, turma: str, user: str):
+# 	selected_turma = db.query(models.Turma).get(turma.pblacore_tag_turma)
+# 	db_user = get_user(db=db, user=user)
+# 	selected_turma.users.append(db_user)
+# 	db.commit()
+
+# # check if user is in turma (this should not be here?)
+# def check_user_in_turma(db: Session, turma: str, user: str):
+# 	rquery = db.query(models.user_turma_table).join(models.Turma).join(models.User).filter(
+# 		models.Turma.pblacore_tag_turma == turma, models.User.pblacore_uid == user).first()
+# 	return rquery

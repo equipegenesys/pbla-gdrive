@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from typing import List
 from sqlalchemy.orm import Session
 
-from driveapi import auth, files, gateway
+from driveapi import auth, files
 from dbcomp import crud, models, schemas, access
 
 # from .access import SessionLocal, engine
@@ -23,7 +23,7 @@ app.include_router(auth.router)
 
 app.include_router(files.router)
 
-app.include_router(gateway.router)
+# app.include_router(gateway.router)
 
 # @app.get("/api/integ/gdrive")
 # def read_root():
