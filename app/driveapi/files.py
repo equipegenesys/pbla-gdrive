@@ -46,7 +46,7 @@ def list_files(user_id: int, db: Session = Depends(access.get_app_db)):
 	user_status = auth.check_integ_status(user_id=user_id, db=db)
 	# create a user schema object, load id in it and get DB user record
 	user = schemas.UserBase
-	user.pblacore_uid = user_id
+	user.pbla_uid = user_id
 	db_user = crud.get_user(db=db, user=user)
 	# if 'crud.get_user' returns a dict, than it's an error. so...
 	if type(db_user) == dict:
@@ -54,6 +54,7 @@ def list_files(user_id: int, db: Session = Depends(access.get_app_db)):
 	elif user_status['integrado'] == True:
 		# get list of turmas for a user from pbla_core microsservice
 		turmas = gateway.get_turmas_from_core(user_id)
+		# print(type(turmas))
 		# create som variables that we will use later
 		page_token = None
 		previous_file = None
@@ -71,32 +72,26 @@ def list_files(user_id: int, db: Session = Depends(access.get_app_db)):
 				full_list = []
 				# load tag turma
 				tag_turma = turma
+				tag_equipe = turmas[tag_turma]
 				# prepare a string to be the search query used in drive API
 				searchQuery = f"fullText contains '{tag_turma}' and mimeType != 'application/vnd.google-apps.folder' and trashed != true"
 				# initiate a loop to be stopped when all the result pages end
 				while True:
 					# create service
 					response = service.files().list(pageSize=100, q=searchQuery,
+													includeItemsFromAllDrives='true',
+													corpora='allDrives',
 													spaces='drive',
+													supportsAllDrives='true',
 													fields=FILE_FIELDS, pageToken=page_token).execute()
 					# for each file in file list...
 					for file in response.get('files', []):
 						# create an object of file schema
-						file_schema = schemas.File
+						# file_schema = schemas.File
 						# if we are in first loop...
 						if loop_index is 1:
 							# add file to list
-							full_list.append(file)
-							# load data into file schema
-							file_schema.driveapi_fileid = file['id']
-							file_schema.is_active = True
-							# if there is no such file, create it. else, update it.
-							if crud.get_files(db=db, file=file_schema) == None:
-								crud.create_file(
-									db, file_schema, db_user, turma)
-							else:
-								crud.update_file(
-									db=db, file_to_update=file['id'], user=user_id, turma=turma.pblacore_tag_turma)
+							full_list.append(file)							
 						# on the subsequent loop indexes..
 						else:
 							last_item_index = len(full_list) - 1
@@ -104,15 +99,6 @@ def list_files(user_id: int, db: Session = Depends(access.get_app_db)):
 							if file['id'] != full_list[last_item_index]['id']:
 								# then do the same as above
 								full_list.append(file)
-
-								file_schema.driveapi_fileid = file['id']
-								file_schema.is_active = True
-								if crud.get_files(db=db, file=file_schema) == None:
-									crud.create_file(
-										db, file_schema, db_user, turma)
-								else:
-									crud.update_file(
-										db=db, file_to_update=file['id'], user=user_id, turma=turma.pblacore_tag_turma)
 						# extra manually add to the loop index
 						loop_index = loop_index + 1
 					# get next page token. if it is none, break the loop
@@ -123,20 +109,19 @@ def list_files(user_id: int, db: Session = Depends(access.get_app_db)):
 				loop_index = 1
 				# append all the data to the final result
 				result['user']['turmas'].append(
-					{'tag_turma': tag_turma, 'files': full_list})
+					{'tag_turma': tag_turma, 'tag_equipe': tag_equipe, 'files': full_list})	
 			return result
 		return {"user_in_turmas": False}
 	return {"integrado": False}
 
+
 # get file metadata from google drive API
-
-
 def get_file_metadata(user_id: int, resource_id: str, db_app: Session = Depends(access.get_app_db)):
 	user_status = auth.check_integ_status(
 		user_id=user_id, db=db_app)  # allways check status
 	if user_status['integrado'] == True:  # if authorization is valid
 		user = schemas.UserBase  # create user object
-		user.pblacore_uid = user_id  # load id in it
+		user.pbla_uid = user_id  # load id in it
 		# get db user (and all its data)
 		db_user = crud.get_user(user=user, db=db_app)
 		creds = db_user.driveapi_token  # load credentials from db
@@ -144,7 +129,8 @@ def get_file_metadata(user_id: int, resource_id: str, db_app: Session = Depends(
 		service = build('drive', 'v3', credentials=creds)
 		try:  # we need to handle connection problems with google
 			response = service.files().get(
-				fileId=resource_id, fields='*').execute()  # gets file metadata
+				fileId=resource_id, fields='*',
+				supportsAllDrives='true').execute()  # gets file metadata
 			return response  # return metadata
 		except HttpError as err:
 			print(err)
@@ -153,10 +139,9 @@ def get_file_metadata(user_id: int, resource_id: str, db_app: Session = Depends(
 	else:
 		return user_status
 
-# get file activity function definition, used by some of the endpoints. uncomment it to enable an endpoint for itself.
+
+# get file activity function definition, used by some of the endpoints.
 # @router.get('/api/integ/gdrive/file/activity')
-
-
 def get_file_activity(user_id: int, resource_id: str, db_app: Session = Depends(access.get_app_db), **kwargs):
 	# initialize a variable with a possibly passed kwarg named 'db_latest_activity' and default value of None, if none is passed:
 	db_latest_activity = kwargs.get('db_latest_activity', None)
@@ -164,7 +149,7 @@ def get_file_activity(user_id: int, resource_id: str, db_app: Session = Depends(
 	if user_status['integrado'] == True:
 		# create user object, load provided file_id, get DB user and its credentials, build google API service:
 		user = schemas.UserBase
-		user.pblacore_uid = user_id
+		user.pbla_uid = user_id
 		db_user = crud.get_user(user=user, db=db_app)
 		creds = db_user.driveapi_token
 		service = build('driveactivity', 'v2', credentials=creds)
@@ -206,16 +191,15 @@ def get_file_activity(user_id: int, resource_id: str, db_app: Session = Depends(
 	else:  # if user_status is different from True
 		return user_status
 
-# download file function definition, used by some of the endpoints. uncomment it to enable an endpoint for itself.
+
+# download file function definition, used by some of the endpoints.
 # @router.get('/api/integ/gdrive/file/download')
-
-
 def download_file(user_id: int, resource_id: str, db_app: Session = Depends(access.get_app_db)):
 	user_status = auth.check_integ_status(user_id=user_id, db=db_app)
 	if user_status['integrado'] == True:
 		# create user object, load provided file_id, get DB user and its credentials, build google API service:
 		user = schemas.UserBase
-		user.pblacore_uid = user_id
+		user.pbla_uid = user_id
 		db_user = crud.get_user(user=user, db=db_app)
 		creds = db_user.driveapi_token
 		service = build('drive', 'v3', credentials=creds)
@@ -257,55 +241,52 @@ def download_file(user_id: int, resource_id: str, db_app: Session = Depends(acce
 	else:
 		return user_status
 
+
 # this endpoint receives a simple a empty request on this endpoint and simply updates all the file records for all users
-
-
 @router.post('/api/integ/gdrive/allusers/update/records')
 def add_users_files_records(db_app: Session = Depends(access.get_app_db)):
 	users = db_app.query(models.User).all()  # get all uses from db
+	
 	# iterate through users, check integration, if ok, get a list of files per turma (school class) from the current user...
 	# iterate through files and 'add_file_records' to each one
 	for user in users:
+		# print(user)
 		user_status = auth.check_integ_status(
-			user_id=user.pblacore_uid, db=db_app)
+			user_id=user.pbla_uid, db=db_app)
 		if user_status['integrado'] == True:
-			file_list = list_files(user_id=user.pblacore_uid, db=db_app)
+			file_list = list_files(user_id=user.pbla_uid, db=db_app)
 			for turma in file_list['user']['turmas']:
 				for file in turma['files']:
+					# print("                    all users",turma['tag_equipe'])					
 					add_file_record(
-						user_id=user.pblacore_uid, resource_id=file['id'], db_app=db_app)
+						user_id=user.pbla_uid, resource_id=file['id'], db_app=db_app, tag_turma=turma['tag_turma'], tag_equipe=turma['tag_equipe'])
 		else:
-			print("user com id", user.pblacore_uid, "não está integrado")
+			print("user com id", user.pbla_uid, "não está integrado")
 	return {'msg': 'records added for EVERY file associated with EVERY user'}
 
+
 # this endpoint receives a empty request and simply updates all the file records for a specific user. same as above, but for the user that is passed as parameter.
-
-
 @router.post('/api/integ/gdrive/user/update/records')
 def add_user_files_records(user_id: int, db_app: Session = Depends(access.get_app_db)):
 	user_status = auth.check_integ_status(user_id=user_id, db=db_app)
 	file_list = list_files(user_id=user_id, db=db_app)
-	# print(file_list)
 	if user_status['integrado'] == True and 'user_in_turmas' not in file_list:
 		for turma in file_list['user']['turmas']:
 			for file in turma['files']:
+				# print("                    single user",turma['tag_equipe'])
 				add_file_record(
-					user_id=user_id, resource_id=file['id'], db_app=db_app)
+					user_id=user_id, resource_id=file['id'], db_app=db_app, tag_turma=turma['tag_turma'], tag_equipe=turma['tag_equipe'])
 		return {'msg': 'records added for EVERY file associated with user'}
 	return {"msg": "O usuário não está integrado ao G Drive"}
 
 
 # this function calls above methods to fetch activity, metadata, binary file and store them in database
-@router.post('/api/integ/gdrive/file/add/record')
-def add_file_record(user_id: int, resource_id: str, db_app: Session = Depends(access.get_app_db)):
-	# create file_schema object, load it with 'resource_id', retrieve file records from DB, load the 'latest_file_record' from DB.
-	file_schema = schemas.FileBase
-	file_schema.driveapi_fileid = resource_id
-	db_file = crud.get_files(db=db_app, file=file_schema)
+# @router.post('/api/integ/gdrive/file/add/record')
+def add_file_record(user_id: int, resource_id: str, tag_turma: str, tag_equipe: str, db_app: Session = Depends(access.get_app_db)):
+	# print("                          tag_equipe no add file record:",tag_equipe)
 	db_record = crud.retrieve_latest_record(
-		db=db_app, table_name=db_file.local_fileid)
-	latest_file_record = db_record.fetchone()
-	
+		db=db_app, driveapi_fileid=resource_id)
+	latest_file_record = db_record.fetchone()	
 	# if there are still no file record for that file...
 	# get activity, metadata, binary file, load them in file_schema object and call create_file_record to write everthing to DB
 	if latest_file_record == None:
@@ -315,27 +296,28 @@ def add_file_record(user_id: int, resource_id: str, db_app: Session = Depends(ac
 			user_id=user_id, resource_id=resource_id, db_app=db_app)
 		download = download_file(
 			user_id=user_id, resource_id=resource_id, db_app=db_app)
-		file_schema = schemas.FileBase
-		file_schema.driveapi_fileid = resource_id
-		db_file = crud.get_files(db=db_app, file=file_schema)
 		file_record = schemas.FileRecords
-		file_record.source_uid = user_id
+		file_record.driveapi_fileid = resource_id
+		file_record.source_pbla_uid = user_id
 		file_record.file_fields = metadata
 		file_record.activity_fields = activity
-		print("antes do if")
+		file_record.tag_turma = tag_turma
+		file_record.tag_equipe = tag_equipe
+		# print("                             file_record.tag_equipe (latest_file_record == None):",file_record.tag_equipe)
 		if download != None:
-			print("if")
 			file_record.file_revision = download
 		create_file_record(db_app=db_app,
-						   file_record=file_record)
+						   file_record=file_record,
+						   driveapi_fileid=resource_id)
 	# if there already are file records for that file...
 	else:
-		# retrieve the timestamp from the latest activity recorded in the DB
-		db_latest_activity = latest_file_record[4][0]['timestamp']
+		db_latest_activity = latest_file_record[7][0]['timestamp']
+
 		# get activity, metadata, binary file. the use of do_latest_activity argument returns data added only after db_latest_activity timestamp 
 		activity = get_file_activity(
 			user_id=user_id, resource_id=resource_id, db_app=db_app, db_latest_activity=db_latest_activity)
 		if activity == []: # if there is no new activity return a msg stating that there is nothing new to add
+			# print("                             tag_equipe (activity == []):",tag_equipe)
 			return {'msg': 'nada de novo para adicionar'}
 		else: # if there is new activity
 			# get activity, metadata, binary file, load them in file_schema object and call create_file_record to write everthing to DB
@@ -343,38 +325,34 @@ def add_file_record(user_id: int, resource_id: str, db_app: Session = Depends(ac
 				user_id=user_id, resource_id=resource_id, db_app=db_app)
 			download = download_file(
 				user_id=user_id, resource_id=resource_id, db_app=db_app)
-			file_schema = schemas.FileBase
-			file_schema.driveapi_fileid = resource_id
-			db_file = crud.get_files(db=db_app, file=file_schema)
 			file_record = schemas.FileRecords
-			file_record.source_uid = user_id
+			file_record.driveapi_fileid = resource_id
+			file_record.source_pbla_uid = user_id
 			file_record.file_fields = metadata
 			file_record.activity_fields = activity
-			print("antes do else")
+			file_record.tag_turma = tag_turma
+			file_record.tag_equipe = tag_equipe
+			# print("                             file_record.tag_equipe (else):",file_record.tag_equipe)
 			if download != None:
-				print("else")
 				file_record.file_revision = download
 			create_file_record(db_app=db_app,
-							   file_record=file_record)
+							   file_record=file_record,
+							   driveapi_fileid=resource_id)
 
 	return {'msg': 'activity, metadata and a copy of the file were added to the database'}
 
 # the function that finally calls 'crud.create_file_record' to persist information
-def create_file_record(file_record: schemas.FileRecords, db_app: Session = Depends(access.get_app_db)):
-	# creates file object, loads it with file id, gets DB file data
-	file_schema = schemas.FileBase
-	file_schema.driveapi_fileid = file_record.file_fields['id']
-	db_file = crud.get_files(db=db_app, file=file_schema)
-	# local_fileid is the table name because there is on table per file in the DB
-	table_name = db_file.local_fileid
-	# get JSON from file_fields and activity_fields, which were passed to the function with file_record
-	file_fields_json = json.dumps(file_record.file_fields)
-	file_record.file_fields = file_fields_json
-	activity_fields_json = json.dumps(file_record.activity_fields)
-	file_record.activity_fields = activity_fields_json
+def create_file_record(driveapi_fileid: str, file_record: schemas.FileRecords, db_app: Session = Depends(access.get_app_db)):
+
+	# file_fields_json = json.dumps(file_record.file_fields)
+	# file_record.file_fields = file_fields_json
+	# activity_fields_json = json.dumps(file_record.activity_fields)
+	# file_record.activity_fields = activity_fields_json
+
 	# get current time, to be added with the file record in the DB
 	now = datetime.now()
 	file_record.record_date = now = datetime.now()
 	# call crud.create_file_record passing the file_record as parameter
+	# print("                  file_record:",file_record.tag_equipe)
 	crud.create_file_record(
-		db=db_app, table_name=table_name, file_record=file_record)
+		db=db_app, driveapi_fileid=driveapi_fileid, file_record=file_record)

@@ -15,9 +15,9 @@ from dbcomp import crud, models, schemas, access
 
 app = FastAPI(openapi_url="/api/integ/gdrive/openapi.json",
               docs_url="/api/integ/gdrive/docs", redoc_url=None,
-              title="PBL Analytics - G Drive Integation API",
-              description="Use este API para integrar contas de estudante e monitorar documentos tagueados.",
-              version = "alpha 0.1")
+              title="PBL Analytics - API de integração com o Google Drive",
+              description="Use este API para integrar contas de estudante e coletar dados de documentos tagueados.",
+              version = "alpha 1")
 
 app.include_router(auth.router)
 

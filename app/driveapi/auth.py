@@ -31,7 +31,7 @@ router = APIRouter()
 @router.get('/api/integ/gdrive/status/user/{user_id}') 
 def check_integ_status(user_id: int, db: Session = Depends(access.get_app_db)):
 	user = schemas.UserBase # creates an object named 'user' of the 'UserBase' schema
-	user.pblacore_uid = user_id # loads the received 'user_id' value into 'user'
+	user.pbla_uid = user_id # loads the received 'user_id' value into 'user'
 	db_user = crud.get_user(db=db, user=user) # we use 'user' to get information from db about the user
 	# if there is a user:
 	if db_user:
@@ -46,7 +46,7 @@ def check_integ_status(user_id: int, db: Session = Depends(access.get_app_db)):
 				return {"user_id": user_id, "cadastrado": True, "integrado": False, "info": "O token não pode ser atualizado ou foi revogado"}
 			mail = str(results.get('user').get('emailAddress')) # if 'try' works, we get to this point and retrive email address and name from google account 
 			name = str(results.get('user').get('displayName'))
-			basicUserData = db_user.basicData() #this method returns a dict with this data: pblacore_uid, driveapi_name, driveapi_email, is_active
+			basicUserData = db_user.basicData() #this method returns a dict with this data: pbla_uid, driveapi_name, driveapi_email, is_active
 			if basicUserData["driveapi_name"] == name and basicUserData["driveapi_email"] == mail: #we make extra sure that user from google account is the same as user in db
 				# if it is true, update db_user status and return info
 				db_user.is_active = True
@@ -100,40 +100,40 @@ def oauthlisten(state: str, code: str, scope: str, db: Session = Depends(access.
 
 	# the following code creates a schema object and loads user data in it
 	user = schemas.UserCreate
-	user.pblacore_uid = state
+	user.pbla_uid = state
 	user.pblacore_token = creds
 	user.driveapi_name = name
 	user.driveapi_email = mail
 
 	userBase = schemas.UserBase
-	userBase.pblacore_uid = state
+	userBase.pbla_uid = state
 
 	# if user already exists...
 	if crud.get_user(db=db, user=user):
 		# update token	
 		crud.update_token(db=db, user_to_update=user)
 		# call check integ status
-		integ_status = check_integ_status(db=db, user_id=user.pblacore_uid)
+		integ_status = check_integ_status(db=db, user_id=user.pbla_uid)
 		if integ_status['integrado'] == True:
 			# list files (that will update the files table and create individual tables for each file in DB)
-			files.list_files(db=db, user_id=user.pblacore_uid)
+			files.list_files(db=db, user_id=user.pbla_uid)
 		# calls 'add_gaccount_info', which will add google account id data to appropriate field in DB
 		add_gaccount_info(db=db, user_id=state)
-		return integ_status
+		return RedirectResponse('https://analytics.pbl.tec.br/home/estudante')
 	# if user does no exist, create new
 	else:
 		crud.create_user_fromgdrive(db=db, user_to_create=user)
-		integ_status = check_integ_status(db=db, user_id=user.pblacore_uid)
+		integ_status = check_integ_status(db=db, user_id=user.pbla_uid)
 		if integ_status['integrado'] == True:
 			# listar arquivos (o que já atualiza a tabela de arquivos e cria tabelas individuais para cada um)
-			files.list_files(db=db, user_id=user.pblacore_uid)
+			files.list_files(db=db, user_id=user.pbla_uid)
 		add_gaccount_info(db=db, user_id=state)
-		return integ_status
+		return RedirectResponse('https://analytics.pbl.tec.br/home/estudante')
 
 # function for specifically getting google user account id info and registering in DB
 def add_gaccount_info(user_id: int, db: Session = Depends(access.get_app_db)):
 	user_schema = schemas.UserBase
-	user_schema.pblacore_uid = user_id
+	user_schema.pbla_uid = user_id
 	
 	db_user = crud.get_user(db=db, user=user_schema)
 	creds = db_user.driveapi_token

@@ -3,10 +3,8 @@ from typing import List, Optional
 from pydantic import BaseModel, Json
 from datetime import datetime
 
-# from .models import Tag, File, User
-
 class UserBase(BaseModel):
-	pblacore_uid: int
+	pbla_uid: int
 	pblacore_email: str
 	pblacore_nome: str
 
@@ -23,67 +21,31 @@ class User(UserBase):
 
 	is_active: bool
 
-	turmas: List[Turma] = []
-	files: List[File] = []
-
-	class Config:
-		orm_mode = True
-
-class TurmaBase(BaseModel):
-	pblacore_tag_turma: str
-	pblacore_disci_turma: str
-	pblacore_ano_turma: int
-	pblacore_semestre_turma: int
-
-class TurmaCreate(TurmaBase):
-	users: Optional[List[int]] = None
-
-class TurmaAddUser(TurmaBase):
-	users: Optional[List[int]] = None
-
-class Turma(TurmaCreate):
-	files: Optional[List[File]] = None
-
-	class Config:
-		orm_mode = True
-
-class TurmaAdd(TurmaBase):
-	users: List[UserBase]
-
-	class Config:
-		orm_mode = True
-
-class FileBase(BaseModel):
-	local_fileid: int
-	driveapi_fileid: str
-	channel_id: uuid.UUID
-
-class FileCreate(FileBase):
-	pass
-
-
-class File(FileBase):
-	# driveapi_owner: str
-	# driveapi_lastmod: str
-	# driveapi_lastmod_user: str
-
-	is_active: bool
-	
-	users: List[User] = None
-	turmas: List[Turma] = None
+	# turmas: List[Turma] = []
+	files_records: List[FileRecords] = []
 
 	class Config:
 		orm_mode = True
 
 class FileRecords(BaseModel):
-	source_uid: int
+
 	record_date: Optional[datetime]
+
+	source_pbla_uid: int
+	
+	tag_turma: str
+
+	tag_equipe: str
+
+	driveapi_fileid: str
+
 	file_fields: Json
+
 	activity_fields: Optional[Json]
+
 	file_revision: Optional[bytes]
 
 	class Config:
 		orm_mode = True
-
 
 User.update_forward_refs()

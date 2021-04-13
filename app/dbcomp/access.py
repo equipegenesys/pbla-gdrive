@@ -17,16 +17,3 @@ def get_app_db():
         yield db
     finally:
         db.close()
-
-# #SETUP DB DATA
-# engine_data_db = create_engine(f"postgresql://micros-gdrive:{dbconfig.password}@pbla_db_1/db_micros-gdrive-data")
-# SessionLocalB = sessionmaker(autocommit=False, autoflush=False, bind=engine_data_db)
-# BaseB = declarative_base()
-# # BaseB.metadata.create_all(bind=engine_data_db)
-
-# def get_data_db():
-#     db = SessionLocalB()
-#     try:
-#         yield db
-#     finally:
-#         db.close()
