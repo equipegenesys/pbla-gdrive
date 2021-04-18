@@ -86,8 +86,11 @@ def add_gaccount_info(db: Session, user_to_update: schemas.UserBase):
 
 
 def create_file_record(db: Session, driveapi_fileid: str, file_record: schemas.FileRecords):
-	file_record.file_revision.seek(0)
-	file_record.file_revision = file_record.file_revision.read()
+	# print("                        nome:",file_record.file_fields['name'])
+	# print("                        mimetype:",file_record.file_fields['mimeType'])
+	# print("                        file_revision TYPE:",type(file_record.file_revision))
+	# file_record.file_revision.seek(0)
+	# file_record.file_revision = file_record.file_revision.read()
 
 	db_file_record = models.FileRecords(record_date = file_record.record_date,
 										source_pbla_uid = file_record.source_pbla_uid,

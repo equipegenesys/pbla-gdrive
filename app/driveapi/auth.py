@@ -76,7 +76,7 @@ def google_oauth(user_id: int, db: Session = Depends(access.get_app_db)):
 		# state is used to pass the user_id, that is returned when google calls back. this way we make sure the token will be associated with the right user in our DB.
 		authorization_url, state = flow.authorization_url(
 			prompt='consent', access_type='offline', include_granted_scopes='true', state=user_id)
-		print(authorization_url)
+		# print(authorization_url)
 		# return RedirectResponse(authorization_url)
 		return authorization_url
 	else:
@@ -107,7 +107,6 @@ def oauthlisten(state: str, code: str, scope: str, db: Session = Depends(access.
 
 	userBase = schemas.UserBase
 	userBase.pbla_uid = state
-
 	# if user already exists...
 	if crud.get_user(db=db, user=user):
 		# update token	
@@ -120,6 +119,7 @@ def oauthlisten(state: str, code: str, scope: str, db: Session = Depends(access.
 		# calls 'add_gaccount_info', which will add google account id data to appropriate field in DB
 		add_gaccount_info(db=db, user_id=state)
 		return RedirectResponse('https://analytics.pbl.tec.br/home/estudante')
+		# return integ_status
 	# if user does no exist, create new
 	else:
 		crud.create_user_fromgdrive(db=db, user_to_create=user)
@@ -129,6 +129,7 @@ def oauthlisten(state: str, code: str, scope: str, db: Session = Depends(access.
 			files.list_files(db=db, user_id=user.pbla_uid)
 		add_gaccount_info(db=db, user_id=state)
 		return RedirectResponse('https://analytics.pbl.tec.br/home/estudante')
+		# return integ_status
 
 # function for specifically getting google user account id info and registering in DB
 def add_gaccount_info(user_id: int, db: Session = Depends(access.get_app_db)):

@@ -35,7 +35,15 @@ API_VERSION = 'v3'
 FILE_FIELDS = 'nextPageToken, files(id, name, mimeType, fileExtension)'
 
 BLOCKED_MIMETYPES = ["application/vnd.google-apps.form",
-					 "application/vnd.google-apps.shortcut"]
+					 "application/vnd.google-apps.shortcut",
+					 "application/vnd.google-apps.unknown",
+					 "application/vnd.google-apps.drive-sdk",
+					 "application/vnd.google-apps.site",
+					 "application/vnd.google-apps.script",
+					 "application/vnd.google-apps.fusiontable",
+					 "application/vnd.google-apps.folder",
+					 "application/vnd.google-apps.map",
+					 "application/vnd.google-apps.script"]
 
 router = APIRouter()
 
@@ -211,6 +219,7 @@ def download_file(user_id: int, resource_id: str, db_app: Session = Depends(acce
 			mimetype = metadata['mimeType']
 			# some mimeTypes are not of a binary type, that can be contained on a blob, so we can't download them
 			if mimetype not in BLOCKED_MIMETYPES:
+				print("entrou no if")
 				# we call 'mimetype_mapper', which is define on an imported mimetypes module.
 				# mimetype_mapper maps native Google Drive formats like Google Slides and Google Drawings to open formats like pptx and png
 				switch = mimetypes.mimetype_mapper(mimetype)
@@ -306,6 +315,10 @@ def add_file_record(user_id: int, resource_id: str, tag_turma: str, tag_equipe: 
 		# print("                             file_record.tag_equipe (latest_file_record == None):",file_record.tag_equipe)
 		if download != None:
 			file_record.file_revision = download
+			file_record.file_revision.seek(0)
+			file_record.file_revision = file_record.file_revision.read()
+		else:
+			file_record.file_revision = None
 		create_file_record(db_app=db_app,
 						   file_record=file_record,
 						   driveapi_fileid=resource_id)
@@ -335,6 +348,10 @@ def add_file_record(user_id: int, resource_id: str, tag_turma: str, tag_equipe: 
 			# print("                             file_record.tag_equipe (else):",file_record.tag_equipe)
 			if download != None:
 				file_record.file_revision = download
+				file_record.file_revision.seek(0)
+				file_record.file_revision = file_record.file_revision.read()
+			else:
+				file_record.file_revision = None
 			create_file_record(db_app=db_app,
 							   file_record=file_record,
 							   driveapi_fileid=resource_id)
