@@ -71,7 +71,7 @@ def google_oauth(user_id: int, db: Session = Depends(access.get_app_db)):
 		flow = Flow.from_client_secrets_file(
 			CLIENT_SECRETS_FILE, scopes=SCOPES)
 		# add our callback URL to the flow. This will be used by the Goo API to call back our app.
-		flow.redirect_uri = 'https://analytics.pbl.tec.br/api/integ/gdrive/oauthlisten'
+		flow.redirect_uri = 'https://analytics.pbl.tec.br/api/integ/gdrive/oauthlisten/'
 		# get the authorization URL and return it. the user needs to be redirected to this URL, so he can authorize ou APP to access his data.
 		# state is used to pass the user_id, that is returned when google calls back. this way we make sure the token will be associated with the right user in our DB.
 		authorization_url, state = flow.authorization_url(
@@ -85,10 +85,11 @@ def google_oauth(user_id: int, db: Session = Depends(access.get_app_db)):
 # creates endpoint for receiving google o auth api callbacks
 @router.get('/api/integ/gdrive/oauthlisten/', include_in_schema=False)
 def oauthlisten(state: str, code: str, scope: str, db: Session = Depends(access.get_app_db)):
+	print("ui, entrou")
 	# does all the flow again. wee need this so we can 'fetch_token' with the received 'code'
 	flow = Flow.from_client_secrets_file(
 		CLIENT_SECRETS_FILE, scopes=SCOPES, state=state)
-	flow.redirect_uri = 'https://analytics.pbl.tec.br/api/integ/gdrive/oauthlisten'
+	flow.redirect_uri = 'https://analytics.pbl.tec.br/api/integ/gdrive/oauthlisten/'
 	flow.fetch_token(code=code)
 	creds = flow.credentials # now that 'flow' has a token, it can get the credentials
 

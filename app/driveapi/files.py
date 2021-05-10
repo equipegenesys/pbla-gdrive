@@ -219,7 +219,7 @@ def download_file(user_id: int, resource_id: str, db_app: Session = Depends(acce
 			mimetype = metadata['mimeType']
 			# some mimeTypes are not of a binary type, that can be contained on a blob, so we can't download them
 			if mimetype not in BLOCKED_MIMETYPES:
-				print("entrou no if")
+				# print("entrou no if")
 				# we call 'mimetype_mapper', which is define on an imported mimetypes module.
 				# mimetype_mapper maps native Google Drive formats like Google Slides and Google Drawings to open formats like pptx and png
 				switch = mimetypes.mimetype_mapper(mimetype)
