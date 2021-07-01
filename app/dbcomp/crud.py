@@ -28,8 +28,8 @@ def create_user_fromgdrive(db: Session, user_to_create: schemas.UserCreate):
 		db.add(db_user)
 		db.commit()
 		db.refresh(db_user)
-		return {"msg": f"A conta do Google Drive de {db_user.driveapi_email} foi integrada ao usuário do PBL Analytics com ID {db_user.pbla_uid}."}
-	return {"msg": "Já existe um usuário cadastrado com esse e-mail"}
+		return {"adicionado": True,"msg": f"A conta do Google Drive de {db_user.driveapi_email} foi integrada ao usuário do PBL Analytics com ID {db_user.pbla_uid}."}
+	return {"adicionado": False, "msg": "Já existe um usuário cadastrado com esse e-mail"}
 
 # if a user was added to turma (class) before requesting integration, this function should be called to create a user in DB from pbla-core data
 def create_user_fromcore(db: Session, user_to_create: schemas.UserBase):

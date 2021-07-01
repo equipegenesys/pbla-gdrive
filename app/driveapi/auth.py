@@ -2,6 +2,8 @@ import pickle
 import os
 import json
 
+from . import gateway
+
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import Flow
 from google.auth.transport.requests import Request
@@ -85,7 +87,6 @@ def google_oauth(user_id: int, db: Session = Depends(access.get_app_db)):
 # creates endpoint for receiving google o auth api callbacks
 @router.get('/api/integ/gdrive/oauthlisten/', include_in_schema=False)
 def oauthlisten(state: str, code: str, scope: str, db: Session = Depends(access.get_app_db)):
-	print("ui, entrou")
 	# does all the flow again. wee need this so we can 'fetch_token' with the received 'code'
 	flow = Flow.from_client_secrets_file(
 		CLIENT_SECRETS_FILE, scopes=SCOPES, state=state)
@@ -115,21 +116,26 @@ def oauthlisten(state: str, code: str, scope: str, db: Session = Depends(access.
 		# call check integ status
 		integ_status = check_integ_status(db=db, user_id=user.pbla_uid)
 		if integ_status['integrado'] == True:
+			gateway.create_integration_record(integration_type = 'pessoa', id = state, is_active = True)
 			# list files (that will update the files table and create individual tables for each file in DB)
 			files.list_files(db=db, user_id=user.pbla_uid)
 		# calls 'add_gaccount_info', which will add google account id data to appropriate field in DB
 		add_gaccount_info(db=db, user_id=state)
-		return RedirectResponse('https://analytics.pbl.tec.br/home/estudante')
+		return RedirectResponse('https://analytics.pbl.tec.br/estudante/integra')
 		# return integ_status
 	# if user does no exist, create new
 	else:
-		crud.create_user_fromgdrive(db=db, user_to_create=user)
-		integ_status = check_integ_status(db=db, user_id=user.pbla_uid)
-		if integ_status['integrado'] == True:
-			# listar arquivos (o que já atualiza a tabela de arquivos e cria tabelas individuais para cada um)
-			files.list_files(db=db, user_id=user.pbla_uid)
-		add_gaccount_info(db=db, user_id=state)
-		return RedirectResponse('https://analytics.pbl.tec.br/home/estudante')
+		result = crud.create_user_fromgdrive(db=db, user_to_create=user)
+		if result['adicionado'] == True:
+			integ_status = check_integ_status(db=db, user_id=user.pbla_uid)
+			if integ_status['integrado'] == True:
+				gateway.create_integration_record(integration_type = 'pessoa', id = state, is_active = True)
+				# listar arquivos (o que já atualiza a tabela de arquivos e cria tabelas individuais para cada um)
+				files.list_files(db=db, user_id=user.pbla_uid)
+			add_gaccount_info(db=db, user_id=state)
+		else:
+			print(result['msg'])
+		return RedirectResponse('https://analytics.pbl.tec.br/estudante/integra')
 		# return integ_status
 
 # function for specifically getting google user account id info and registering in DB
