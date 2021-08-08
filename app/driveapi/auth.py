@@ -93,6 +93,7 @@ def oauthlisten(state: str, code: str, scope: str, db: Session = Depends(access.
 	flow.redirect_uri = 'https://analytics.pbl.tec.br/api/integ/gdrive/oauthlisten/'
 	flow.fetch_token(code=code)
 	creds = flow.credentials # now that 'flow' has a token, it can get the credentials
+	print("chegou", state, code)
 
 	# the following code builds the service an get some data from google API
 	service = build('drive', 'v3', credentials=creds)
@@ -121,6 +122,7 @@ def oauthlisten(state: str, code: str, scope: str, db: Session = Depends(access.
 			files.list_files(db=db, user_id=user.pbla_uid)
 		# calls 'add_gaccount_info', which will add google account id data to appropriate field in DB
 		add_gaccount_info(db=db, user_id=state)
+		print("if")
 		return RedirectResponse('https://analytics.pbl.tec.br/estudante/integra')
 		# return integ_status
 	# if user does no exist, create new
@@ -135,6 +137,7 @@ def oauthlisten(state: str, code: str, scope: str, db: Session = Depends(access.
 			add_gaccount_info(db=db, user_id=state)
 		else:
 			print(result['msg'])
+			print("else")
 		return RedirectResponse('https://analytics.pbl.tec.br/estudante/integra')
 		# return integ_status
 
